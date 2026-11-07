@@ -4,5 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/WeddingRun.unity
+    guid: 34e22eaf863d340ddb6bae8ee2d0fa53
   m_configObjects: {}

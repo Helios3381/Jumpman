@@ -10,12 +10,14 @@ using Random = UnityEngine.Random;
 using Unity.Services.Core;
 using Unity.Services.Authentication;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 
 public class GameManager : MonoBehaviour
 {
     //Game Info
     public Boolean isGameActive = false;
     //BGM manager
+    private static bool hasEnteredGame = false;
     public AudioSource bgmSource;
     public AudioClip confirmSound;
     public AudioClip bgmTheme;
@@ -27,11 +29,14 @@ public class GameManager : MonoBehaviour
     public TextMeshProUGUI scoreText;
     public TextMeshProUGUI bestText;
     public Button restartButton;
+    public Button rankingButton;
+    public Button settingsButton;
     public GameObject permanentScreen;
     public GameObject titleScreen;
     public GameObject gameScreen;
     public GameObject scoreScreen;
     public GameObject gameOverScreen;
+    public GameObject GameOverScreenWebGL;
     public GameObject settingsScreen;
     public GameObject rankingScreen;
     public TextMeshProUGUI newRecordText;
@@ -56,27 +61,48 @@ public class GameManager : MonoBehaviour
     //game data
     //the time when the game is started
     public float gameTime = 0f;
+    //update to vue.js
+    [DllImport("__Internal")]
+    private static extern void GameOverAndSendScore(float score);
 
     async void Awake()
     {
-        await InitializeUGS();
-        //get player best score
-        bestScore = await GetBestScore();
-        bestText.text = "�̨αo��: " + bestScore.ToString("F2") + "m";
+        if (!isWebGL())
+        {
+            //load ugs only in normal mode
+            await InitializeUGS();
+            //get player best score
+            bestScore = await GetBestScore();
+            bestText.text = "最佳得分: " + bestScore.ToString("F2") + "m";
+        }
     }
 
     // Start is called before the first frame update
-    async void Start()
+    void Start()
     {
         //object init
         titleScreen = GameObject.Find("TitleScreen");
+        if (isWebGL())
+        {
+            //disable ranking and settings button when it is webGL
+            rankingButton.gameObject.SetActive(false);
+            settingsButton.gameObject.SetActive(false);
+            permanentScreen.gameObject.SetActive(false);
+            if (hasEnteredGame)
+            {
+                StartBGM();
+            }
+        }
+        else
+        {
+            //play bgm once the game is started
+            StartBGM();
+        }
+
         if (GameObject.Find("Player"))
         {
             playerControllerScript = GameObject.Find("Player").GetComponent<PlayerController>();
         }
-        bgmSource.Stop();
-        bgmSource.clip = bgmTheme;
-        bgmSource.Play();
     }
 
     // Update is called once per frame
@@ -88,7 +114,7 @@ public class GameManager : MonoBehaviour
             score += Time.deltaTime * 5f;
             scoreText.text = "Score: " + Mathf.FloorToInt(score) + "m";
 
-            if (score > bestScore && !isNewRecordAlertTextDisplayed)
+            if (score > bestScore && !isNewRecordAlertTextDisplayed && !isWebGL())
             {
                 isNewRecordAlertTextDisplayed = true;
                 StartCoroutine(ShowNewRecord());
@@ -133,9 +159,9 @@ public class GameManager : MonoBehaviour
         while (isGameActive)
         {
             float currentRepeatRate = baseRepeatRate - (gameTime * spawnAcceleration);
-            currentRepeatRate = Mathf.Min(currentRepeatRate, maxRepeatRate);
+            currentRepeatRate = Mathf.Max(currentRepeatRate, 1f);
 
-            yield return new WaitForSeconds(currentRepeatRate);
+            yield return new WaitForSeconds(Random.Range(0.5f, currentRepeatRate));
             if (playerControllerScript.gameOver == false)
             {
                 int index = Random.Range(0, targets.Count);
@@ -153,7 +179,19 @@ public class GameManager : MonoBehaviour
     public void GameOver()
     {
         isGameActive = false;
-        gameOverScreen.gameObject.SetActive(true);
+
+        if(isWebGL())
+        {
+            Debug.Log($"[Unity] WebGL send score：{score} to website");
+            GameOverAndSendScore(score);
+            GameOverScreenWebGL.gameObject.SetActive(true);
+        }
+        else
+        {
+            Debug.Log($"Non WebGL: {score}");
+            gameOverScreen.gameObject.SetActive(true);
+        }
+
         restartButton.gameObject.SetActive(true);
 
         bgmSource.Stop();
@@ -289,6 +327,31 @@ public class GameManager : MonoBehaviour
     public class PlayerMetadata
     {
         public string name;
+    }
+
+    private bool isWebGL()
+    {
+        // if WebGL
+        #if UNITY_WEBGL && !UNITY_EDITOR
+            return true;
+        #else
+            Debug.Log($"Non WebGL: {score}");
+            return false;
+        #endif
+    }
+
+    public void StartBGM()
+    {
+        hasEnteredGame = true;
+        if (bgmSource.isPlaying) return;
+        bgmSource.Stop();
+        bgmSource.clip = bgmTheme;
+        bgmSource.Play();
+    }
+
+    public void StopBGM()
+    {
+        bgmSource.Stop();
     }
 }
 

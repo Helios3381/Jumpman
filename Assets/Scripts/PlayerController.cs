@@ -50,7 +50,10 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space) && isOnGround && !gameOver)
+        if ((Input.GetKeyDown(KeyCode.Space) ||
+            Input.GetMouseButtonDown(0) ||
+            (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)) &&
+            isOnGround && !gameOver)
         {
             Debug.Log("Jump");
             playerJump = true;

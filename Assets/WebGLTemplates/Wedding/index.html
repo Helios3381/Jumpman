@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
+    <title>{{{ PRODUCT_NAME }}}</title>
+    <style>
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #2a1e3f; }
+      #unity-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: #2a1e3f; touch-action: none; }
+      #loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+                 font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; color: #fff; background: linear-gradient(#3b2a5c, #c75b84); }
+      #loading .xi { width: 84px; height: 84px; border-radius: 50%; background: #d7263d; border: 5px solid #f0b850; color: #f0b850;
+                     font-size: 52px; line-height: 84px; text-align: center; font-weight: bold; }
+      #bar { width: min(60vw, 320px); height: 12px; border-radius: 6px; background: rgba(255,255,255,0.3); overflow: hidden; }
+      #bar-fill { width: 0%; height: 100%; background: #f0b850; transition: width 0.2s; }
+      #error { display: none; position: absolute; left: 10px; right: 10px; bottom: 10px; padding: 10px; border-radius: 8px;
+               background: #e5484d; color: #fff; font: 14px sans-serif; }
+    </style>
+  </head>
+  <body>
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+    <div id="loading"><div class="xi">囍</div><div id="bar"><div id="bar-fill"></div></div><div id="pct">Loading… 0%</div></div>
+    <div id="error"></div>
+    <script>
+      var unityInstance = null;
+      var pendingBgm = null;   // "start" / "stop" requested by the parent page before Unity finished loading
+
+      // Called by the wedding web page (parent) when entering / leaving full screen.
+      window.callUnityStartBGM = function () {
+        if (unityInstance) unityInstance.SendMessage("WeddingGame", "WebStartBGM");
+        else pendingBgm = "start";
+      };
+      window.callUnityStopBGM = function () {
+        if (unityInstance) unityInstance.SendMessage("WeddingGame", "WebStopBGM");
+        else pendingBgm = "stop";
+      };
+
+      var buildUrl = "Build";
+      var config = {
+        dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
+        frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
+        codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
+#if MEMORY_FILENAME
+        memoryUrl: buildUrl + "/{{{ MEMORY_FILENAME }}}",
+#endif
+#if SYMBOLS_FILENAME
+        symbolsUrl: buildUrl + "/{{{ SYMBOLS_FILENAME }}}",
+#endif
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+        productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+        productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+        showBanner: function (msg, type) {
+          if (type !== "error") { console.warn(msg); return; }
+          var e = document.getElementById("error"); e.style.display = "block"; e.textContent = msg;
+        },
+      };
+      // Phones: keep the render resolution reasonable for performance.
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) config.devicePixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+
+      var script = document.createElement("script");
+      script.src = buildUrl + "/{{{ LOADER_FILENAME }}}?v=" + Date.now();  // never use a stale cached loader
+      script.onload = function () {
+        createUnityInstance(document.querySelector("#unity-canvas"), config, function (p) {
+          document.getElementById("bar-fill").style.width = (100 * p) + "%";
+          document.getElementById("pct").textContent = "Loading… " + Math.round(100 * p) + "%";
+        }).then(function (instance) {
+          unityInstance = instance;
+          document.getElementById("loading").style.display = "none";
+          if (pendingBgm === "start") window.callUnityStartBGM();
+          if (pendingBgm === "stop") window.callUnityStopBGM();
+        }).catch(function (message) {
+          var e = document.getElementById("error"); e.style.display = "block"; e.textContent = message;
+        });
+      };
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>
