@@ -38,9 +38,13 @@ namespace WeddingRun
             yield return new WaitForSecondsRealtime(0.6f);
 
             game.autoPilot = true;
+            game.debugInvincible = true;
             game.StartRun();
             yield return new WaitForSecondsRealtime(4.6f);
             Shot("03_stage1");
+            game.DebugGiveShield();
+            yield return new WaitForSecondsRealtime(0.8f);
+            Shot("03b_shield");
             yield return new WaitForSecondsRealtime(6f);
             Shot("04_stage1b");
             for (int s = 1; s < Stages.List.Length; s++)
@@ -50,12 +54,35 @@ namespace WeddingRun
                 Shot($"0{4 + s}a_stage{s + 1}_banner");
                 yield return new WaitForSecondsRealtime(4.5f);
                 Shot($"0{4 + s}b_stage{s + 1}");
+                if (Stages.List[s].theme == 3)
+                {
+                    game.DebugSpawnAt(ModelId.SumoPig, 30f);
+                    yield return new WaitForSecondsRealtime(0.35f);
+                    Shot("07c_pig_warning");
+                    yield return new WaitForSecondsRealtime(0.45f);
+                    Shot("07d_pig_charge");
+                    // Port of Nagoya and the proposal (first lap)
+                    game.DebugJumpTo(Stages.StartOf(0, 3) + Stages.List[3].length - 95f);
+                    yield return new WaitForSecondsRealtime(1.5f); Shot("07e_port");
+                    yield return new WaitForSecondsRealtime(3.4f); Shot("07f_propose_kneel");
+                    yield return new WaitForSecondsRealtime(1.5f); Shot("07g_propose_yes");
+                    yield return new WaitForSecondsRealtime(1.0f); Shot("07h_propose_hug");
+                    yield return new WaitForSecondsRealtime(2.3f);
+                }
             }
-            game.DebugJumpTo(Stages.FirstLapLength + 2);
-            yield return new WaitForSecondsRealtime(1.0f);
-            Shot("09a_lap2_banner");
-            yield return new WaitForSecondsRealtime(4f);
-            Shot("09b_lap2");
+            game.DebugForceSlide();
+            yield return new WaitForSecondsRealtime(0.15f);
+            Shot("08c_slide");
+
+            // wedding finale (hug, kiss, guests) then the loop back to Hong Kong
+            game.DebugJumpTo(Stages.FirstLapLength - 45);
+            yield return new WaitForSecondsRealtime(1.6f);  Shot("09a_finale_slowdown");
+            yield return new WaitForSecondsRealtime(1.4f);  Shot("09b_finale_hug");
+            yield return new WaitForSecondsRealtime(1.4f);  Shot("09c_finale_kiss");
+            yield return new WaitForSecondsRealtime(1.6f);  Shot("09d_finale_guests");
+            yield return new WaitForSecondsRealtime(3.0f);  Shot("09e_resume");
+            yield return new WaitForSecondsRealtime(3.5f);  Shot("09f_lap2");
+            game.debugInvincible = false;
             game.DebugKill();
             yield return new WaitForSecondsRealtime(1.3f);
             Shot("09c_bump");

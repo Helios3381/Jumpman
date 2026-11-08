@@ -160,14 +160,27 @@ namespace WeddingRun
                     break;
 
                 case ModelId.PineappleBun:
-                    Ball(r, H("#E59A2F"), new Vector3(0, -0.08f, 0), new Vector3(0.9f, 0.45f, 0.9f));
-                    Ball(r, H("#F8C65E"), new Vector3(0, 0.0f, 0), new Vector3(0.84f, 0.42f, 0.84f));
-                    for (int i = -1; i <= 1; i++)
                     {
-                        Box(r, H("#D98A22"), new Vector3(i * 0.2f, 0.17f, -0.05f), new Vector3(0.03f, 0.06f, 0.7f), new Vector3(0, 45, 0));
-                        Box(r, H("#D98A22"), new Vector3(i * 0.2f, 0.17f, -0.05f), new Vector3(0.03f, 0.06f, 0.7f), new Vector3(0, -45, 0));
+                        // Hong Kong pineapple bun: a golden dome covered in a cracked, checkered sugar crust.
+                        // Tilted towards the camera so the famous top is what you see.
+                        var bun = Node(r, "Bun", new Vector3(0, -0.05f, 0), new Vector3(-32, 0, 0));
+                        Ball(bun, H("#B8742A"), new Vector3(0, -0.02f, 0), new Vector3(0.92f, 0.5f, 0.92f));   // bread + crack colour
+                        Cyl(bun, H("#C98A3E"), new Vector3(0, -0.2f, 0), 0.43f, 0.08f);                       // flat bottom
+                        float rx = 0.47f, ry = 0.27f;
+                        for (int gx = -3; gx <= 3; gx++)
+                            for (int gz = -3; gz <= 3; gz++)
+                            {
+                                // diamond grid like the real crust
+                                float u = (gx + gz) * 0.115f, v = (gx - gz) * 0.115f;
+                                float d = (u * u + v * v) / (rx * rx * 0.86f);
+                                if (d > 1f) continue;
+                                float y = ry * Mathf.Sqrt(1 - Mathf.Min(1, (u * u + v * v) / (rx * rx))) - 0.02f;
+                                Vector3 n = new Vector3(u / (rx * rx), (y + 0.02f) / (ry * ry), v / (rx * rx)).normalized;
+                                var tile = Part(bun, MeshKit.Sphere, (gx + gz) % 2 == 0 ? H("#F7C44F") : H("#F2B640"),
+                                    new Vector3(u, y, v), new Vector3(0.15f, 0.07f, 0.15f), default, false, 0.45f);
+                                tile.localRotation = Quaternion.FromToRotation(Vector3.up, n) * Quaternion.Euler(0, 45, 0);
+                            }
                     }
-                    Box(r, H("#FFF0A0"), new Vector3(0.05f, -0.05f, -0.3f), new Vector3(0.5f, 0.12f, 0.18f), new Vector3(0, 0, 8)); // butter: 菠蘿油
                     break;
 
                 case ModelId.GongCandy:
@@ -227,10 +240,21 @@ namespace WeddingRun
                     break;
 
                 case ModelId.Shield:
-                    Cyl(r, gold, Vector3.zero, 0.42f, 0.14f, new Vector3(90, 0, 0));
-                    Cyl(r, red, new Vector3(0, 0, -0.03f), 0.34f, 0.12f, new Vector3(90, 0, 0));
-                    Text3D(r, "囍", gold, new Vector3(0, 0.01f, -0.1f), 3.0f);
-                    Part(r, MeshKit.Torus(0.58f, 0.03f, 28, 5), H("#FFE9A8"), Vector3.zero, Vector3.one, default, true);
+                    {
+                        // A real shield silhouette: gold rim, red face, white 囍, plus a soft glow and sparkles
+                        var sh = Node(r, "ShieldBody", new Vector3(0, 0.03f, 0));
+                        Part(sh, MeshKit.ShieldShape(0.16f), gold, Vector3.zero, Vector3.one * 0.95f, default, false, 0.85f);
+                        Part(sh, MeshKit.ShieldShape(0.1f), H("#D7263D"), new Vector3(0, 0.02f, -0.05f), Vector3.one * 0.74f, default, false, 0.5f);
+                        Part(sh, MeshKit.ShieldShape(0.02f), H("#FF6B7F"), new Vector3(-0.1f, 0.17f, -0.105f), new Vector3(0.22f, 0.26f, 1f), default, true); // highlight
+                        Box(sh, gold, new Vector3(0, 0.32f, -0.1f), new Vector3(0.62f, 0.05f, 0.03f));
+                        Text3D(sh, "囍", Color.white, new Vector3(0, -0.04f, -0.11f), 3.2f);
+                        Ball(r, new Color(1f, 0.88f, 0.45f, 0.25f), new Vector3(0, 0, 0.08f), new Vector3(1.35f, 1.35f, 0.3f));        // glow
+                        for (int i = 0; i < 4; i++)
+                        {
+                            float a = (45 + i * 90) * Mathf.Deg2Rad;
+                            Part(r, MeshKit.Diamond(), H("#FFF3B0"), new Vector3(Mathf.Cos(a) * 0.62f, Mathf.Sin(a) * 0.62f, -0.05f), new Vector3(0.12f, 0.18f, 0.12f), default, true);
+                        }
+                    }
                     break;
 
                 case ModelId.AlarmClock:
@@ -368,6 +392,45 @@ namespace WeddingRun
                     }
                     break;
 
+                // ------------------------------------------------ special obstacles
+
+                case ModelId.SumoPig:
+                    {
+                        // generic Nagoya "miso pig" in a red apron and headband, built facing -X (it charges at the player)
+                        Color pink = H("#F7A6B8"), pinkDk = H("#E5869D"), apron = H("#D7263D");
+                        var pg = Node(r, "Pig", Vector3.zero);
+                        foreach (float z in new[] { -0.28f, 0.28f })
+                        {
+                            Cyl(pg, pinkDk, new Vector3(0.1f, 0.22f, z), 0.17f, 0.44f);                       // legs
+                            Ball(pg, H("#C96A82"), new Vector3(0.06f, 0.03f, z), new Vector3(0.36f, 0.12f, 0.3f));   // hooves
+                        }
+                        Ball(pg, pink, new Vector3(0, 0.82f, 0), new Vector3(1.2f, 1.05f, 0.95f));             // round body
+                        Box(pg, apron, new Vector3(-0.5f, 0.72f, 0), new Vector3(0.12f, 0.75f, 0.62f), new Vector3(0, 0, -8)); // apron
+                        Box(pg, Color.white, new Vector3(0, 1.12f, 0), new Vector3(1.0f, 0.06f, 0.9f));          // apron string
+                        var apronText = Text3D(pg, "味噌", Color.white, new Vector3(-0.575f, 0.72f, 0), 2.2f, new Vector3(0, 90, -8));
+                        apronText.lineSpacing = -10;
+                        // arms pushing forward in a charge
+                        foreach (float z in new[] { -0.45f, 0.45f })
+                        {
+                            Part(pg, MeshKit.Capsule, pink, new Vector3(-0.45f, 0.95f, z), new Vector3(0.22f, 0.3f, 0.22f), new Vector3(0, 0, 70));
+                            Ball(pg, pinkDk, new Vector3(-0.72f, 1.0f, z), Vector3.one * 0.2f);
+                        }
+                        // head
+                        var hd = Node(pg, "Head", new Vector3(-0.32f, 1.45f, 0));
+                        Ball(hd, pink, Vector3.zero, new Vector3(0.85f, 0.75f, 0.8f));
+                        Cyl(hd, pinkDk, new Vector3(-0.38f, -0.05f, 0), 0.18f, 0.16f, new Vector3(0, 0, 90));   // snout
+                        foreach (float z in new[] { -0.06f, 0.06f }) Ball(hd, H("#7A3A4A"), new Vector3(-0.47f, -0.05f, z), Vector3.one * 0.05f, default, true);
+                        foreach (float z in new[] { -0.2f, 0.2f })
+                        {
+                            Ball(hd, H("#2A1E28"), new Vector3(-0.3f, 0.12f, z), new Vector3(0.07f, 0.1f, 0.07f), default, true);       // eyes
+                            Box(hd, H("#2A1E28"), new Vector3(-0.3f, 0.23f, z), new Vector3(0.03f, 0.03f, 0.12f), new Vector3(z > 0 ? 25 : -25, 0, 0), true); // fierce brows
+                            Part(hd, MeshKit.Prism(), pinkDk, new Vector3(0.05f, 0.33f, z * 1.4f), new Vector3(0.12f, 0.25f, 0.22f), new Vector3(0, 0, 15)); // ears
+                        }
+                        Box(hd, Color.white, new Vector3(0, 0.3f, 0), new Vector3(0.5f, 0.08f, 0.82f));          // headband
+                        Part(pg, MeshKit.Torus(0.12f, 0.035f, 12, 5, 300f), pinkDk, new Vector3(0.62f, 0.9f, 0), Vector3.one, new Vector3(0, 90, 0)); // curly tail
+                    }
+                    break;
+
                 // ------------------------------------------------ overhead: slide under (bottom edge at y = 1.15)
 
                 case ModelId.OverheadSign:
@@ -487,6 +550,7 @@ namespace WeddingRun
         public class Rig
         {
             public Transform root, body, hip, legL, legR, armL, armR, head, skirt, bouquet;
+            public Transform kneeL, kneeR;   // groom only: so he can kneel on one knee for the proposal
             public bool isBride;
         }
 
@@ -506,6 +570,17 @@ namespace WeddingRun
             }
         }
 
+        static Transform GroomLeg(Transform leg, Color pants, Color shoe, bool formal)
+        {
+            Part(leg, MeshKit.Capsule, pants, new Vector3(0, -0.18f, 0), new Vector3(0.21f, 0.2f, 0.21f));    // thigh
+            var knee = Node(leg, "Knee", new Vector3(0, -0.36f, 0));
+            Ball(knee, pants, Vector3.zero, Vector3.one * 0.205f);
+            Part(knee, MeshKit.Capsule, pants, new Vector3(0, -0.17f, 0), new Vector3(0.2f, 0.2f, 0.2f));    // shin
+            Box(knee, shoe, new Vector3(0.06f, -0.34f, 0), new Vector3(0.3f, 0.1f, 0.18f));
+            if (!formal) Box(knee, H("#E5484D"), new Vector3(0.06f, -0.30f, -0.092f), new Vector3(0.2f, 0.03f, 0.01f), default, true);
+            return knee;
+        }
+
         /// <summary>Groom: casual clothes (formal=false) or tuxedo (formal=true).</summary>
         public static Rig BuildGroom(Transform parent, bool formal)
         {
@@ -520,16 +595,10 @@ namespace WeddingRun
 
             rig.hip = Node(rig.body, "Hip", new Vector3(0, 0.74f, 0));
             rig.legL = Node(rig.hip, "LegL", new Vector3(0, 0, -0.13f));
-            Part(rig.legL, MeshKit.Capsule, pants, new Vector3(0, -0.34f, 0), new Vector3(0.21f, 0.37f, 0.21f));
-            Box(rig.legL, shoe, new Vector3(0.06f, -0.7f, 0), new Vector3(0.3f, 0.1f, 0.18f));
             rig.legR = Node(rig.hip, "LegR", new Vector3(0, 0, 0.13f));
-            Part(rig.legR, MeshKit.Capsule, pants, new Vector3(0, -0.34f, 0), new Vector3(0.21f, 0.37f, 0.21f));
-            Box(rig.legR, shoe, new Vector3(0.06f, -0.7f, 0), new Vector3(0.3f, 0.1f, 0.18f));
-            if (!formal)
-            {
-                Box(rig.legL, H("#E5484D"), new Vector3(0.06f, -0.66f, -0.092f), new Vector3(0.2f, 0.03f, 0.01f), default, true);
-                Box(rig.legR, H("#E5484D"), new Vector3(0.06f, -0.66f, -0.092f), new Vector3(0.2f, 0.03f, 0.01f), default, true);
-            }
+            // thigh → knee → shin + shoe (looks like one straight leg until the knee bends)
+            rig.kneeL = GroomLeg(rig.legL, pants, shoe, formal);
+            rig.kneeR = GroomLeg(rig.legR, pants, shoe, formal);
 
             var torso = Node(rig.body, "Torso", new Vector3(0, 0.74f, 0));
             Box(torso, top, new Vector3(0, 0.3f, 0), new Vector3(0.42f, 0.62f, 0.5f));
@@ -579,6 +648,68 @@ namespace WeddingRun
         }
 
         static Color black() => H("#1A1620");
+
+        /// <summary>A simple wedding guest / night-market visitor. Returns the arm nodes for waving.</summary>
+        public class Person { public Transform root, body, armL, armR, legL, legR; }
+
+        public static Transform BuildGuest(Transform parent, int seed, out Transform armL, out Transform armR)
+        {
+            var pr = BuildPerson(parent, seed, false);
+            armL = pr.armL; armR = pr.armR;
+            return pr.root;
+        }
+
+        /// <summary>A simple townsperson with swingable legs and arms (optionally carrying a shopping bag).</summary>
+        public static Person BuildPerson(Transform parent, int seed, bool withBag)
+        {
+            var pr = new Person();
+            var rnd = new System.Random(seed);
+            Color Pick(params string[] hex) => H(hex[rnd.Next(hex.Length)]);
+            bool woman = rnd.NextDouble() < 0.5;
+            float s = 0.82f + (float)rnd.NextDouble() * 0.12f;
+            var root = Node(parent, "Guest", Vector3.zero);
+            var body = Node(root, "Body", Vector3.zero);
+            body.localScale = Vector3.one * s;
+            Color skin = Pick("#FFDCC2", "#F5C9A8", "#E8B48E", "#FFE4D0");
+            Color hair = Pick("#2A1E1A", "#3A2622", "#1A1620", "#5A3A28", "#8A6A4A");
+            Color cloth = woman ? Pick("#F7A8C4", "#9ED9C3", "#C3B1E1", "#FFE3A3", "#8FC8F0", "#FFB38A")
+                                : Pick("#3A4A6E", "#5A5A66", "#6E4A3A", "#2E5E4E", "#7A6A9A");
+            // legs (pivot at the hip so they can swing when walking)
+            pr.legL = Node(body, "LegL", new Vector3(0, 0.62f, -0.1f));
+            pr.legR = Node(body, "LegR", new Vector3(0, 0.62f, 0.1f));
+            foreach (var leg in new[] { pr.legL, pr.legR })
+            {
+                Part(leg, MeshKit.Capsule, woman ? skin : H("#2E2E3A"), new Vector3(0, -0.29f, 0), new Vector3(0.16f, 0.3f, 0.16f));
+                Box(leg, H("#2A2230"), new Vector3(0.04f, -0.58f, 0), new Vector3(0.22f, 0.08f, 0.13f));
+            }
+            if (woman) Frus(body, cloth, new Vector3(0, 0.45f, 0), 0.38f, 0.2f, 0.62f, default, 12);
+            else Box(body, cloth, new Vector3(0, 0.92f, 0), new Vector3(0.38f, 0.56f, 0.44f));
+            if (woman) Frus(body, cloth, new Vector3(0, 1.0f, 0), 0.2f, 0.22f, 0.36f, default, 12);
+            else { Box(body, Color.white, new Vector3(0.19f, 1.0f, 0), new Vector3(0.02f, 0.3f, 0.14f)); Box(body, Pick("#D7263D", "#2A2230", "#E4577E"), new Vector3(0.2f, 1.0f, 0), new Vector3(0.025f, 0.26f, 0.05f)); }
+            var armL = Node(body, "ArmL", new Vector3(0, 1.28f, -0.26f));
+            var armR = Node(body, "ArmR", new Vector3(0, 1.28f, 0.26f));
+            foreach (var arm in new[] { armL, armR })
+            {
+                Part(arm, MeshKit.Capsule, woman ? skin : cloth, new Vector3(0, -0.22f, 0), new Vector3(0.13f, 0.23f, 0.13f));
+                Ball(arm, skin, new Vector3(0, -0.45f, 0), Vector3.one * 0.12f);
+            }
+            float hr = 0.27f;
+            var head = Node(body, "Head", new Vector3(0, 1.35f, 0));
+            Ball(head, skin, new Vector3(0, hr, 0), Vector3.one * hr * 2);
+            Ball(head, H("#2A1E28"), new Vector3(hr * 0.86f, hr + 0.02f, -hr * 0.34f), new Vector3(0.06f, 0.08f, 0.06f), default, true);
+            Ball(head, H("#2A1E28"), new Vector3(hr * 0.9f, hr + 0.02f, hr * 0.18f), new Vector3(0.05f, 0.07f, 0.05f), default, true);
+            Ball(head, H("#FF9AAE"), new Vector3(hr * 0.72f, hr - 0.08f, -hr * 0.62f), new Vector3(0.08f, 0.04f, 0.05f), default, true);
+            Ball(head, hair, new Vector3(-0.04f, hr + 0.1f, 0), new Vector3(0.58f, 0.4f, 0.58f));
+            if (woman) Ball(head, hair, new Vector3(-0.13f, hr - 0.12f, 0), new Vector3(0.4f, 0.62f, 0.54f));
+            if (withBag && rnd.NextDouble() < 0.6)
+            {
+                var bag = Node(armR, "Bag", new Vector3(0, -0.6f, 0));
+                Box(bag, Pick("#E4577E", "#F2C14E", "#8FC8F0", "#FFFFFF", "#9ED9C3"), new Vector3(0, -0.12f, 0), new Vector3(0.34f, 0.3f, 0.14f));
+                Box(bag, H("#2A2230"), new Vector3(0, 0.07f, 0), new Vector3(0.2f, 0.08f, 0.02f));
+            }
+            pr.root = root; pr.body = body; pr.armL = armL; pr.armR = armR;
+            return pr;
+        }
 
         /// <summary>Bride: casual clothes (formal=false) or wedding dress (formal=true).</summary>
         public static Rig BuildBride(Transform parent, bool formal)
@@ -642,11 +773,25 @@ namespace WeddingRun
             rig.bouquet = Node(rig.armL, formal ? "Bouquet" : "BubbleTea", new Vector3(0.05f, -0.46f, 0));
             if (formal)
             {
-                Ball(rig.bouquet, H("#FF6F91"), new Vector3(0, 0.05f, 0), Vector3.one * 0.15f);
-                Ball(rig.bouquet, H("#FFFFFF"), new Vector3(0.08f, 0.02f, -0.06f), Vector3.one * 0.12f);
-                Ball(rig.bouquet, H("#FFC94D"), new Vector3(-0.07f, 0.03f, -0.07f), Vector3.one * 0.11f);
-                Ball(rig.bouquet, H("#FF9EB8"), new Vector3(0.0f, 0.08f, -0.1f), Vector3.one * 0.11f);
-                Frus(rig.bouquet, H("#5BAA6A"), new Vector3(0, -0.22f, 0), 0.03f, 0.08f, 0.22f, default, 8);
+                // a proper bridal bouquet: roses in a dome, leaves, ribbon and stems
+                Color[] rose = { H("#FF4F7B"), H("#FFFFFF"), H("#FFB3C7"), H("#FF7FA0"), H("#FFF0F5"), H("#FF4F7B"), H("#FFD1DC") };
+                Vector3[] at = { new Vector3(0, 0.1f, 0), new Vector3(0.11f, 0.05f, -0.08f), new Vector3(-0.11f, 0.05f, -0.08f), new Vector3(0.1f, 0.05f, 0.09f),
+                                 new Vector3(-0.1f, 0.05f, 0.09f), new Vector3(0, 0.04f, -0.14f), new Vector3(0, 0.05f, 0.14f) };
+                for (int i = 0; i < at.Length; i++)
+                {
+                    Ball(rig.bouquet, rose[i], at[i], Vector3.one * (i == 0 ? 0.17f : 0.14f));
+                    Ball(rig.bouquet, Color.Lerp(rose[i], Color.black, 0.15f), at[i] + new Vector3(0.02f, 0.045f, -0.02f), Vector3.one * 0.06f); // rose centre
+                }
+                for (int i = 0; i < 6; i++)
+                {
+                    float a = i * 60f * Mathf.Deg2Rad;
+                    Ball(rig.bouquet, H("#4E9A5B"), new Vector3(Mathf.Cos(a) * 0.17f, -0.02f, Mathf.Sin(a) * 0.17f), new Vector3(0.1f, 0.04f, 0.07f), new Vector3(0, -i * 60f, 20));
+                }
+                Frus(rig.bouquet, H("#5BAA6A"), new Vector3(0, -0.3f, 0), 0.035f, 0.07f, 0.28f, default, 8);
+                Cyl(rig.bouquet, Color.white, new Vector3(0, -0.1f, 0), 0.075f, 0.07f);
+                Box(rig.bouquet, Color.white, new Vector3(0.03f, -0.2f, -0.07f), new Vector3(0.04f, 0.16f, 0.02f), new Vector3(0, 0, 15));
+                Box(rig.bouquet, Color.white, new Vector3(-0.03f, -0.2f, -0.07f), new Vector3(0.04f, 0.16f, 0.02f), new Vector3(0, 0, -15));
+                rig.bouquet.localScale = Vector3.one * 1.25f;
             }
             else
             {

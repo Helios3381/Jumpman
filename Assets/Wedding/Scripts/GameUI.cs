@@ -22,7 +22,7 @@ namespace WeddingRun
         CanvasScaler scaler;
         RectTransform root, title, hud, pause, gameOver, ranking, howTo, overlay, popupLayer;
         TextMeshProUGUI bestLabel, scoreText, distanceText, comboText, countdownText, portraitHint;
-        RectTransform lapPill;
+        RectTransform lapPill, warnIcon;
         TextMeshProUGUI lapText;
         RectTransform comboPill, shieldPill, progressFill, progressMarker, bannerCard, toastCard;
         TextMeshProUGUI bannerTitle, bannerSub, toastText;
@@ -170,7 +170,7 @@ namespace WeddingRun
             if (OnlineRanking.Available)
                 Btn(title, T("排行榜", "Ranking", "ランキング"), new Vector2(0.5f, 0), new Vector2(170, 110), new Vector2(310, 96), Style.Gold, OpenRanking, 38);
 
-            Label(title, T("往上滑 / 空白鍵：跳躍（按住更高、空中再滑一次＝二段跳）　·　往下滑 / ↓：滑行", "Swipe up / Space: Jump (hold = higher, again in the air = double jump)  ·  Swipe down / ↓: Slide", "上スワイプ / スペース：ジャンプ（長押しで高く・空中でもう一度＝2段ジャンプ）　·　下スワイプ / ↓：スライド"), 30, new Color(1, 1, 1, 0.9f), new Vector2(0.5f, 0), new Vector2(0, 32), new Vector2(1800, 50), TextAlignmentOptions.Center, false);
+            Label(title, T("點擊畫面 / 空白鍵：跳躍（按住更高、空中再點一次＝二段跳）　·　往下滑 / ↓：滑行", "Tap / Space: Jump (hold = higher, tap again in the air = double jump)  ·  Swipe down / ↓: Slide", "タップ / スペース：ジャンプ（長押しで高く・空中でもう一度＝2段ジャンプ）　·　下スワイプ / ↓：スライド"), 30, new Color(1, 1, 1, 0.9f), new Vector2(0.5f, 0), new Vector2(0, 32), new Vector2(1800, 50), TextAlignmentOptions.Center, false);
             portraitHint = Label(title, T("橫向螢幕遊玩體驗更佳", "Best played in landscape", "スマホを横にして遊んでね"), 34, Palette.Gold, new Vector2(0.5f, 0), new Vector2(0, 400), new Vector2(1600, 60));
         }
 
@@ -262,10 +262,18 @@ namespace WeddingRun
             var hl = Card(hud, "HintSlide", new Vector2(0, 0), new Vector2(190, 60), new Vector2(320, 64), new Color(0.43f, 0.16f, 0.27f, 0.45f), Pill, 0);
             Label(hl, T("↓ 往下滑：滑行", "↓ Swipe down: Slide", "↓ 下スワイプ：スライド"), 28, Color.white);
             var hr = Card(hud, "HintJump", new Vector2(1, 0), new Vector2(-190, 60), new Vector2(320, 64), new Color(0.43f, 0.16f, 0.27f, 0.45f), Pill, 0);
-            Label(hr, T("↑ 往上滑：跳躍", "↑ Swipe up: Jump", "↑ 上スワイプ：ジャンプ"), 28, Color.white);
+            Label(hr, T("點擊畫面：跳躍", "Tap: Jump", "タップ：ジャンプ"), 28, Color.white);
             foreach (var img in hl.GetComponentsInChildren<Image>()) img.raycastTarget = false;
             foreach (var img in hr.GetComponentsInChildren<Image>()) img.raycastTarget = false;
             foreach (var img in card.GetComponentsInChildren<Image>()) img.raycastTarget = false;
+
+            // "!" warning on the right edge when something charges in from off-screen
+            warnIcon = Rect(hud, "Warn", new Vector2(1, 0.5f), new Vector2(-80, 0), new Vector2(96, 96));
+            Img(warnIcon, Circle, Color.white).raycastTarget = false;
+            var wi = Rect(warnIcon, "In", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(82, 82));
+            Img(wi, Circle, Palette.Bad).raycastTarget = false;
+            Label(wi, "!", 66, Color.white);
+            warnIcon.gameObject.SetActive(false);
 
             var pb = Btn(hud, "II", new Vector2(1, 1), new Vector2(-90, -90), new Vector2(104, 104), Style.Secondary, game.Pause, 44);
             pb.transform.Find("Bg").GetComponent<Image>().sprite = Circle;
@@ -278,6 +286,23 @@ namespace WeddingRun
         }
 
         public void HideHUD() => Hide(hud);
+
+        /// <summary>Blinking "!" at the right edge, at the screen height of <paramref name="world"/>.</summary>
+        public void Warn(Vector3 world)
+        {
+            var cam = Camera.main;
+            if (!cam || !warnIcon) return;
+            Vector3 sp = cam.WorldToScreenPoint(new Vector3(cam.transform.position.x, world.y, 0));
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(hud, sp, null, out var local);
+            warnIcon.anchoredPosition = new Vector2(-80, local.y);
+            warnIcon.gameObject.SetActive(true);
+            var g = Group(warnIcon);
+            Tween(1.2f, k =>
+            {
+                g.alpha = Mathf.Repeat(k * 6f, 1f) < 0.65f ? 1f : 0.55f;
+                warnIcon.localScale = Vector3.one * (1f + Mathf.Sin(k * Mathf.PI * 6f) * 0.08f);
+            }, () => warnIcon.gameObject.SetActive(false));
+        }
 
         public void SetScore(int score, float distance)
         {
@@ -576,12 +601,12 @@ namespace WeddingRun
             Img(Stretch(howTo, "Dim"), White, new Color(0.15f, 0.04f, 0.12f, 0.6f));
             var card = Card(howTo, "Card", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1500, 960), Palette.Cream);
             Label(card, T("玩法說明", "How to Play", "遊び方"), 60, Palette.Wine, new Vector2(0.5f, 1), new Vector2(0, -70), new Vector2(800, 90));
-            Label(card, T("跳躍：往上滑 / 空白鍵 / ↑（按住更高・空中再一次＝二段跳）　·　滑行：往下滑 / ↓（空中＝急降）\n香港 → 台北 → 金門 → 名古屋 → 婚禮會場，之後四個城市無限循環、越跑越快！", "Jump: swipe up / Space / ↑ (hold = higher, again in the air = double jump)  ·  Slide: swipe down / ↓ (in the air = drop)\nHong Kong → Taipei → Kinmen → Nagoya → Wedding, then the 4 cities loop forever, faster and faster!", "ジャンプ：上スワイプ / スペース / ↑（長押しで高く・空中でもう一度＝2段ジャンプ）　·　スライド：下スワイプ / ↓（空中＝急降下）\n香港 → 台北 → 金門 → 名古屋 → 結婚式場、そのあとは4都市を無限ループ、どんどん速くなる！"), 32, Palette.Ink,
+            Label(card, T("跳躍：點擊畫面 / 空白鍵 / ↑（按住更高・空中再點一次＝二段跳）　·　滑行：往下滑 / ↓（空中＝急降）\n香港 → 台北 → 金門 → 名古屋 → 婚禮會場，之後四個城市無限循環、越跑越快！", "Jump: tap / Space / ↑ (hold = higher, tap again in the air = double jump)  ·  Slide: swipe down / ↓ (in the air = drop)\nHong Kong → Taipei → Kinmen → Nagoya → Wedding, then the 4 cities loop forever, faster and faster!", "ジャンプ：タップ / スペース / ↑（長押しで高く・空中でもう一度＝2段ジャンプ）　·　スライド：下スワイプ / ↓（空中＝急降下）\n香港 → 台北 → 金門 → 名古屋 → 結婚式場、そのあとは4都市を無限ループ、どんどん速くなる！"), 32, Palette.Ink,
                 new Vector2(0.5f, 1), new Vector2(0, -165), new Vector2(1400, 100), TextAlignmentOptions.Center, false);
 
             ModelId[] good = { ModelId.Heart, ModelId.Ring, ModelId.RedPacket, ModelId.PineappleBun, ModelId.GongCandy, ModelId.BubbleTea, ModelId.EbiFry, ModelId.MisoKatsu, ModelId.WeddingCookie, ModelId.Shield };
             ModelId[] bad = { ModelId.AlarmClock, ModelId.Briefcase, ModelId.RainCloud };
-            ModelId[] obs = { ModelId.Cone, ModelId.GiftStack2, ModelId.LiquorJar, ModelId.BrickWall, ModelId.Scooter, ModelId.Suitcase, ModelId.ChampagneTower, ModelId.OverheadBanner, ModelId.OverheadFirecracker };
+            ModelId[] obs = { ModelId.Cone, ModelId.GiftStack2, ModelId.LiquorJar, ModelId.Suitcase, ModelId.ChampagneTower, ModelId.OverheadBanner, ModelId.OverheadFirecracker, ModelId.SumoPig };
 
             Column(card, -480, T("加分道具", "Bonus items", "プラスアイテム"), Palette.Good, good, true);
             Column(card, 0, T("扣分道具（不會結束）", "Minus items (keep running)", "マイナスアイテム（セーフ）"), Palette.Bad, bad, true);
@@ -605,7 +630,7 @@ namespace WeddingRun
                 raw.texture = IconStudio.Get(ids[i]);
                 raw.raycastTarget = false;
                 Label(row, def.Name, 30, Palette.Ink, new Vector2(0, 0.5f), new Vector2(195, 0), new Vector2(210, rowH), TextAlignmentOptions.Left, false);
-                string pts = def.kind == ItemKind.Shield ? T("擋1次", "Blocks 1", "1回ガード") : (showPoints ? (def.points > 0 ? "+" + def.points : def.points.ToString()) : (def.overhead ? T("要滑行", "Slide", "スライド") : def.tall ? T("要跳高", "Jump high", "高くジャンプ") : ""));
+                string pts = def.kind == ItemKind.Shield ? T("擋1次", "Blocks 1", "1回ガード") : (showPoints ? (def.points > 0 ? "+" + def.points : def.points.ToString()) : (def.overhead ? T("要滑行", "Slide", "スライド") : def.charge > 0 ? T("會衝過來", "Charges!", "突進！") : def.tall ? T("要跳高", "Jump high", "高くジャンプ") : ""));
                 Label(row, pts, 28, color, new Vector2(1, 0.5f), new Vector2(-65, 0), new Vector2(130, rowH), TextAlignmentOptions.Right);
             }
         }

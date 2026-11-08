@@ -7,7 +7,7 @@ namespace WeddingRun
     {
         const int Rate = 44100;
 
-        public static AudioClip Bump, Slide, Join, Coin, Chime, Bad, Shield, ShieldBreak, Click, Hover, Beep, Go, Whoosh, Fanfare;
+        public static AudioClip Applause, Bump, Slide, Join, Coin, Chime, Bad, Shield, ShieldBreak, Click, Hover, Beep, Go, Whoosh, Fanfare;
 
         public static void Build()
         {
@@ -21,6 +21,7 @@ namespace WeddingRun
             Beep = Notes("beep", new[] { 880f }, 0.0f, 0.18f, 0.35f, Wave.Triangle);
             Go = Notes("go", new[] { 1318.5f, 1760f }, 0.06f, 0.35f, 0.4f, Wave.Triangle);
             Whoosh = Noise("whoosh", 0.25f, 0.18f);
+            Applause = Claps("applause", 2.6f, 0.5f);
             Bump = Sweep("bump", 520f, 180f, 0.35f, 0.45f);
             Slide = Noise("slide", 0.3f, 0.14f);
             Join = Notes("join", new[] { 784f, 988f, 1175f, 1568f, 1976f }, 0.08f, 0.6f, 0.4f, Wave.Bell);
@@ -75,6 +76,31 @@ namespace WeddingRun
                 float f = Mathf.Lerp(f0, f1, t) * (1 + Mathf.Sin(t * 60f) * 0.06f);
                 ph += 2 * Mathf.PI * f / Rate;
                 data[i] = Osc(Wave.Triangle, ph) * Mathf.Min(1, t * 60f) * (1 - t) * volume;
+            }
+            var clip = AudioClip.Create(name, n, 1, Rate, false);
+            clip.SetData(data, 0);
+            return clip;
+        }
+
+        /// <summary>Crowd clapping: lots of short noise bursts, fading out.</summary>
+        static AudioClip Claps(string name, float length, float volume)
+        {
+            int n = Mathf.CeilToInt(length * Rate);
+            var data = new float[n];
+            var rnd = new System.Random(11);
+            int claps = (int)(length * 45);
+            for (int c = 0; c < claps; c++)
+            {
+                int start = (int)(rnd.NextDouble() * (n - Rate * 0.05f));
+                float fade = 1f - start / (float)n * 0.7f;
+                float amp = (0.4f + (float)rnd.NextDouble() * 0.6f) * fade;
+                float prev = 0;
+                for (int i = 0; i < Rate * 0.03f; i++)
+                {
+                    float w = (float)rnd.NextDouble() * 2 - 1;
+                    float hp = w - prev; prev = w;            // crude high-pass → "clap" texture
+                    data[start + i] += hp * amp * Mathf.Exp(-i / (Rate * 0.006f)) * volume * 0.5f;
+                }
             }
             var clip = AudioClip.Create(name, n, 1, Rate, false);
             clip.SetData(data, 0);

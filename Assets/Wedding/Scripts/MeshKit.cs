@@ -170,6 +170,47 @@ namespace WeddingRun
             });
         }
 
+        /// <summary>Extruded heraldic shield (flat top, curved sides, pointed bottom), ~1 unit wide, facing -Z.</summary>
+        public static Mesh ShieldShape(float depth = 0.16f)
+        {
+            return Cached($"shield_{depth}", () =>
+            {
+                var pts = new List<Vector3>();
+                // top edge (slight upward arc) from left to right
+                for (int i = 0; i <= 8; i++)
+                {
+                    float x = -0.5f + i / 8f;
+                    pts.Add(new Vector3(x, 0.5f + 0.05f * (1 - 4 * x * x), 0));
+                }
+                // right side straight down, then a curve into the bottom point
+                pts.Add(new Vector3(0.5f, 0.1f, 0));
+                for (int i = 1; i <= 10; i++)
+                {
+                    float t = i / 10f;
+                    Vector3 p0 = new Vector3(0.5f, 0.1f, 0), c = new Vector3(0.48f, -0.4f, 0), p1 = new Vector3(0f, -0.68f, 0);
+                    pts.Add((1 - t) * (1 - t) * p0 + 2 * (1 - t) * t * c + t * t * p1);
+                }
+                for (int i = 9; i >= 1; i--)
+                {
+                    float t = i / 10f;
+                    Vector3 p0 = new Vector3(-0.5f, 0.1f, 0), c = new Vector3(-0.48f, -0.4f, 0), p1 = new Vector3(0f, -0.68f, 0);
+                    pts.Add((1 - t) * (1 - t) * p0 + 2 * (1 - t) * t * c + t * t * p1);
+                }
+                pts.Add(new Vector3(-0.5f, 0.1f, 0));
+
+                var b = new Builder();
+                Vector3 f = Vector3.back * depth / 2, k = Vector3.forward * depth / 2, center = new Vector3(0, 0.05f, 0);
+                for (int i = 0; i < pts.Count; i++)
+                {
+                    Vector3 a0 = pts[i], a1 = pts[(i + 1) % pts.Count];
+                    b.Tri(center + f, a0 + f, a1 + f, Vector3.back);
+                    b.Tri(center + k, a0 + k, a1 + k, Vector3.forward);
+                    b.Quad(a0 + f, a1 + f, a1 + k, a0 + k, (a0 + a1) / 2 - center);
+                }
+                return b.Build("Shield");
+            });
+        }
+
         /// <summary>A gable roof prism (triangle cross-section) 1x1x1, ridge along X.</summary>
         public static Mesh Prism()
         {
@@ -225,6 +266,7 @@ namespace WeddingRun
             {
                 if (mf.transform == root) continue;
                 if (mf.GetComponent<TMP_Text>() != null) continue;
+                if (mf.GetComponentInParent<NoMerge>(true) != null) continue;
                 var mr = mf.GetComponent<MeshRenderer>();
                 if (mr == null || mf.sharedMesh == null) continue;
                 var mat = mr.sharedMaterial;

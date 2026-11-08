@@ -39,7 +39,7 @@ namespace WeddingRun
         public bool autoPilot;
         public float debugStartDistance = 0;
 
-        enum State { Title, Countdown, Playing, Paused, Dying, GameOver }
+        enum State { Title, Countdown, Playing, Paused, Dying, GameOver, Celebrating }
         State state = State.Title;
 
         class Hazard
@@ -47,6 +47,7 @@ namespace WeddingRun
             public ItemDef def;
             public Transform t;
             public float x, y, bobAmp, bobPhase;
+            public float width, vx;     // hitbox width (stretchable obstacles) and extra speed (charging obstacles)
             public bool done;
         }
 
@@ -142,6 +143,8 @@ namespace WeddingRun
             runner.Build();
             runner.Jumped += () => PlaySfx(jumpSound, 0.55f);
             runner.DoubleJumped += () => { PlaySfx(SfxBank.Whoosh, 0.9f); PlaySfx(jumpSound, 0.4f, 1.25f); };
+            runner.Kissed += OnKiss;
+            runner.ProposalAccepted += OnProposalAccepted;
             runner.Landed += () => env.Burst(new Vector3(CoupleRunner.GroomX, 0.1f, 0), new Color(1, 1, 1, 0.8f), 5, 0.4f);
             runner.state = CoupleRunner.State.Run;
 
@@ -291,12 +294,20 @@ namespace WeddingRun
         {
             foreach (var h in hazards) if (h.t) Destroy(h.t.gameObject);
             hazards.Clear();
+            if (celebrateCo != null) { StopCoroutine(celebrateCo); celebrateCo = null; }
+            foreach (var g in guests) if (g.t) Destroy(g.t.gameObject);
+            guests.Clear();
+            celebrated = false;
+            proposed = false;
+            if (proposeCo != null) { StopCoroutine(proposeCo); proposeCo = null; }
             distance = debugStartDistance; itemScore = 0; plus = 0; minus = 0; combo = 0; maxCombo = 0;
             comboTimer = 0; invulnerable = 0; recordAnnounced = false; hitBy = null;
             nextPatternIn = 16f;
             stage = Stages.IndexAt(distance);
             lap = Stages.LapAt(distance);
-            env.SetStage(Stages.List[stage].theme, false);
+            curTheme = Stages.ThemeAt(distance);
+            env.SetStage(curTheme, false);
+            env.Spectate = false;
             runner.ResetRunner(lap > 0 || stage >= 1);   // Hong Kong: he runs alone
             if (lap > 0 || Stages.List[stage].theme == 4) runner.SetFormal(true, false);
             runner.state = CoupleRunner.State.Run;
@@ -374,6 +385,11 @@ namespace WeddingRun
                     speed = Mathf.MoveTowards(speed, Stages.SpeedAt(distance), dt * 6f);
                     UpdateStage();
                     UpdateSpawning(dt);
+                    if (lap == 0 && !proposed && distance >= ProposeAt) proposeCo = StartCoroutine(Proposal());
+                    else if (lap == 0 && !celebrated && distance >= CelebrateAt) celebrateCo = StartCoroutine(WeddingFinale());
+                    break;
+                case State.Celebrating:
+                    distance += speed * dt;     // the finale coroutine brings the speed down to 0
                     break;
                 case State.Dying:
                     dyingTimer += Time.unscaledDeltaTime;
@@ -393,11 +409,12 @@ namespace WeddingRun
                     env.Burst(new Vector3(CoupleRunner.GroomX + 0.6f, 0.1f, -0.2f), new Color(1, 1, 1, 0.7f), 1, 0.3f);
                 env.Tick(dt, speed);
                 UpdateHazards(dt);
+                UpdateGuests(dt);
             }
 
-            if (state == State.Playing || state == State.Countdown)
+            if (state == State.Playing || state == State.Countdown || state == State.Celebrating)
             {
-                if (comboTimer > 0 && (comboTimer -= dt) <= 0) { combo = 0; ui.SetCombo(0, 1); }
+                if (state != State.Celebrating && comboTimer > 0 && (comboTimer -= dt) <= 0) { combo = 0; ui.SetCombo(0, 1); }
                 ui.SetScore(Score, distance);
                 ui.SetProgress(Stages.JourneyProgress(distance), stage, lap);
                 if (!recordAnnounced && best > 0 && Score > best && state == State.Playing)
@@ -412,8 +429,8 @@ namespace WeddingRun
 
         /// <summary>
         /// Keyboard: Space/↑/W = jump (hold = higher), ↓/S = slide.
-        /// Touch / mouse: swipe up = jump (keep the finger down = higher), swipe down = slide (keep down = keep sliding).
-        /// A quick tap also jumps, so guests who just tap the screen can still play.
+        /// Touch / mouse: touch the screen = jump (keep touching = higher, touch again in the air = double jump);
+        /// swipe down = slide (keep the finger down = keep sliding). A swipe right after the touch turns the hop into a slide.
         /// </summary>
         void ReadInput(out bool pressed, out bool held, out bool slide, out bool slideHeld)
         {
@@ -423,7 +440,7 @@ namespace WeddingRun
             slideHeld = Input.GetKey(KeyCode.DownArrow) || Input.GetKey(KeyCode.S);
 
             var es = EventSystem.current;
-            bool began, down, ended;
+            bool began, down;
             Vector2 pos;
             int id;
             if (Input.touchCount > 0)
@@ -431,60 +448,52 @@ namespace WeddingRun
                 var t = Input.GetTouch(0);
                 id = t.fingerId; pos = t.position;
                 began = t.phase == TouchPhase.Began;
-                ended = t.phase == TouchPhase.Ended || t.phase == TouchPhase.Canceled;
-                down = !ended;
+                down = t.phase != TouchPhase.Ended && t.phase != TouchPhase.Canceled;
             }
             else
             {
                 id = -1; pos = Input.mousePosition;
                 began = Input.GetMouseButtonDown(0);
                 down = Input.GetMouseButton(0);
-                ended = Input.GetMouseButtonUp(0);
             }
 
             if (began)
             {
                 bool overUI = es != null && (id >= 0 ? es.IsPointerOverGameObject(id) : es.IsPointerOverGameObject());
-                swipe = overUI ? Swipe.None : Swipe.Pending;
-                swipeStart = pos;
-                swipeTime = 0;
+                gesture = overUI ? Gesture.None : Gesture.Touch;
+                gestureStart = pos;
+                if (!overUI) pressed = true;           // touching the screen jumps right away
             }
-            if (swipe == Swipe.None) return;
-            swipeTime += Time.unscaledDeltaTime;
+            if (!down) { gesture = Gesture.None; return; }
 
-            float threshold = Mathf.Max(30f, Screen.height * 0.045f);
-            float dy = pos.y - swipeStart.y;
-            if (swipe == Swipe.Pending && down)
+            if (gesture == Gesture.Touch && pos.y - gestureStart.y < -Mathf.Max(30f, Screen.height * 0.045f))
             {
-                if (dy > threshold) { swipe = Swipe.Up; pressed = true; }
-                else if (dy < -threshold) { swipe = Swipe.Down; slide = true; }
+                gesture = Gesture.Down;
+                slide = true;
             }
-            if (down)
-            {
-                if (swipe == Swipe.Up) held = true;
-                if (swipe == Swipe.Down) slideHeld = true;
-            }
-            if (ended)
-            {
-                // quick tap without movement = jump
-                if (swipe == Swipe.Pending && swipeTime < 0.3f && Mathf.Abs(dy) < threshold) pressed = true;
-                swipe = Swipe.None;
-            }
+            if (gesture == Gesture.Touch) held = true;
+            if (gesture == Gesture.Down) slideHeld = true;
         }
 
-        enum Swipe { None, Pending, Up, Down }
-        Swipe swipe = Swipe.None;
-        Vector2 swipeStart;
-        float swipeTime;
+        enum Gesture { None, Touch, Down }
+        Gesture gesture = Gesture.None;
+        Vector2 gestureStart;
+
+        int curTheme = -1;
 
         void UpdateStage()
         {
+            int th = Stages.ThemeAt(distance);
+            if (th != curTheme)
+            {
+                curTheme = th;
+                env.SetStage(th, false);
+            }
             int s = Stages.IndexAt(distance);
             int l = Stages.LapAt(distance);
             if (s == stage && l == lap) return;
             stage = s; lap = l;
             var def = Stages.List[s];
-            env.SetStage(def.theme, false);
             ui.StageBanner(def, lap);
             PlaySfx(SfxBank.Fanfare, 0.6f);
             if (def.brideJoins && !runner.BrideVisible)
@@ -537,12 +546,192 @@ namespace WeddingRun
             cam.transform.SetPositionAndRotation(basePos + offset, Quaternion.Euler(6f, 0, 0));
         }
 
+        // ------------------------------------------------------------------ wedding finale
+
+        /// <summary>The proposal happens at the Port of Nagoya, near the end of the Nagoya stage (first lap only).</summary>
+        static float ProposeAt => Stages.StartOf(0, 3) + Stages.List[3].length - 48f;
+
+        bool proposed;
+        Coroutine proposeCo;
+
+        /// <summary>
+        /// Port of Nagoya at night, first lap, nobody else around: they stop by the harbour, he kneels with the ring,
+        /// she says yes — hearts and fireworks over the water — then on to the wedding venue.
+        /// </summary>
+        IEnumerator Proposal()
+        {
+            state = State.Celebrating;
+            proposed = true;
+            foreach (var h in hazards)
+                if (!h.done && h.t && h.x > CoupleRunner.GroomX - 1f)
+                {
+                    env.Burst(new Vector3(h.x, h.y + 0.5f, 0), Palette.Rose, 12, 0.8f);
+                    Destroy(h.t.gameObject);
+                    h.done = true;
+                }
+            while (speed > 0.05f)
+            {
+                speed = Mathf.MoveTowards(speed, 0, Time.deltaTime * 15f);
+                yield return null;
+            }
+            speed = 0;
+            runner.BeginPropose();          // just the two of them by the harbour at night
+            yield return new WaitForSeconds(4.8f);
+            runner.EndPropose();
+            nextPatternIn = 24f;
+            state = State.Playing;
+            proposeCo = null;
+        }
+
+        void OnProposalAccepted()
+        {
+            PlaySfx(SfxBank.Chime, 0.9f);
+            PlaySfx(SfxBank.Join, 0.8f);
+            var at = new Vector3(CoupleRunner.GroomX - 0.5f, 2.0f, -0.2f);
+            env.Burst(at, Palette.Rose, 40, 1.1f);
+            env.Burst(new Vector3(CoupleRunner.GroomX - 0.62f, 1.2f, -0.2f), new Color(0.8f, 0.95f, 1f), 24, 0.6f);   // ring sparkle
+            env.Confetti(new Vector3(CoupleRunner.GroomX - 0.5f, 2.5f, 0.5f));
+            StartCoroutine(HarbourFireworks());
+        }
+
+        IEnumerator HarbourFireworks()
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                env.Firework(cam.transform.position + new Vector3(Random.Range(-25f, 30f), Random.Range(14f, 24f), 70f));
+                yield return new WaitForSeconds(0.35f);
+            }
+        }
+
+        /// <summary>Where the first-lap finale starts (just before the loop goes back to Hong Kong).</summary>
+        static float CelebrateAt => Stages.FirstLapLength - 28f;
+
+        bool celebrated;
+        Coroutine celebrateCo;
+
+        class Guest
+        {
+            public Transform t, armL, armR;
+            public float x, z, phase, appear;
+        }
+        readonly List<Guest> guests = new List<Guest>();
+
+        /// <summary>
+        /// End of the wedding venue: the couple stops, hugs and kisses while guests pop up around them and cheer,
+        /// then everyone keeps running (the guests stay behind and scroll away).
+        /// </summary>
+        IEnumerator WeddingFinale()
+        {
+            state = State.Celebrating;
+            celebrated = true;
+            // clear anything still on the road ahead
+            foreach (var h in hazards)
+                if (!h.done && h.t && h.x > CoupleRunner.GroomX - 1f)
+                {
+                    env.Burst(new Vector3(h.x, h.y + 0.5f, 0), Palette.Rose, 12, 0.8f);
+                    Destroy(h.t.gameObject);
+                    h.done = true;
+                }
+
+            while (speed > 0.05f)
+            {
+                speed = Mathf.MoveTowards(speed, 0, Time.deltaTime * 15f);
+                yield return null;
+            }
+            speed = 0;
+
+            runner.BeginCelebrate();
+            PlaySfx(SfxBank.Fanfare, 0.8f);
+            SpawnGuests();
+            yield return new WaitForSeconds(0.5f);
+            PlaySfx(SfxBank.Applause, 0.8f);
+            for (int i = 0; i < 6; i++)
+            {
+                env.Confetti(new Vector3(CoupleRunner.GroomX - 0.3f + Random.Range(-3f, 3f), 2.5f, Random.Range(-0.5f, 1.5f)));
+                yield return new WaitForSeconds(0.7f);
+            }
+            runner.EndCelebrate();
+            nextPatternIn = 30f;
+            state = State.Playing;
+            celebrateCo = null;
+        }
+
+        void OnKiss()
+        {
+            PlaySfx(SfxBank.Chime, 0.9f);
+            PlaySfx(SfxBank.Applause, 0.7f, 1.1f);
+            var at = new Vector3(CoupleRunner.GroomX - 0.3f, 2.2f, -0.2f);
+            env.Burst(at, Palette.Rose, 40, 1.1f);
+            env.Burst(at, Palette.Gold, 25, 1.4f);
+            env.Firework(cam.transform.position + new Vector3(-6f, 18f, 60f));
+            env.Firework(cam.transform.position + new Vector3(10f, 22f, 60f));
+        }
+
+        void SpawnGuests()
+        {
+            var root = hazardRoot;
+            // (x, z): back row behind the couple, two at the sides in front
+            Vector2[] spots =
+            {
+                new Vector2(-9.6f, 2.4f), new Vector2(-8.0f, 3.0f), new Vector2(-6.6f, 2.6f), new Vector2(-4.0f, 2.7f),
+                new Vector2(-2.4f, 3.0f), new Vector2(-1.0f, 2.3f), new Vector2(-11.2f, -3.9f), new Vector2(1.2f, -3.9f),
+            };
+            for (int i = 0; i < spots.Length; i++)
+            {
+                var g = new Guest { x = spots[i].x, z = spots[i].y, phase = Random.value * 6f, appear = -i * 0.12f };
+                g.t = ModelFactory.BuildGuest(root, 1000 + i * 37 + Random.Range(0, 9999), out g.armL, out g.armR);
+                float dx = CoupleRunner.GroomX - 0.3f - g.x, dz = 0.2f - g.z;
+                g.t.localRotation = Quaternion.Euler(0, Mathf.Atan2(-dz, dx) * Mathf.Rad2Deg, 0);
+                g.t.localScale = Vector3.zero;
+                g.t.position = new Vector3(g.x, 0, g.z);
+                guests.Add(g);
+            }
+        }
+
+        void UpdateGuests(float dt)
+        {
+            bool cheering = state == State.Celebrating;
+            for (int i = guests.Count - 1; i >= 0; i--)
+            {
+                var g = guests[i];
+                g.x -= speed * dt;
+                g.appear += dt;
+                float a = Mathf.Clamp01(g.appear / 0.35f);
+                float tt = Time.time * 7f + g.phase;
+                float hop = cheering ? Mathf.Abs(Mathf.Sin(tt)) * 0.28f : 0f;
+                if (g.t)
+                {
+                    g.t.localScale = Vector3.one * (g.appear <= 0 ? 0 : UIKit.EaseOutBack(a));
+                    g.t.position = new Vector3(g.x, hop, g.z);
+                    float wave = Mathf.Sin(tt * 1.3f) * 25f;
+                    g.armL.localRotation = Quaternion.Euler(0, 0, cheering ? 150 + wave : 20);
+                    g.armR.localRotation = Quaternion.Euler(0, 0, cheering ? 150 - wave : 150 + wave);  // keep waving goodbye
+                }
+                if (g.x < DespawnX - 4f)
+                {
+                    if (g.t) Destroy(g.t.gameObject);
+                    guests.RemoveAt(i);
+                }
+            }
+        }
+
+        public void DebugForceSlide() => runner.DebugSlide();
+        public void DebugGiveShield() { runner.SetShield(true); ui.SetShield(true); }
+        public void DebugSpawnAt(ModelId id, float x)
+        {
+            Spawn(id, x, 0);
+            if (id == ModelId.SumoPig) ui.Warn(new Vector3(0, 0.9f, 0));
+        }
+        [System.NonSerialized] public bool debugInvincible;   // AutoShot only
+
         // ------------------------------------------------------------------ spawning
 
         void UpdateSpawning(float dt)
         {
             nextPatternIn -= speed * dt;
             if (nextPatternIn > 0) return;
+            if (lap == 0 && !celebrated && distance > CelebrateAt - 75f) return;   // keep the road clear for the finale
+            if (lap == 0 && !proposed && distance > ProposeAt - 75f && distance < ProposeAt + 5f) return;   // and for the proposal
             var diff = Stages.DifficultyAt(distance);
             float length = SpawnPattern(Stages.List[stage], diff);
             float safeGap = speed * 0.6f + 2.5f;   // time to land / stand up and react again
@@ -553,9 +742,10 @@ namespace WeddingRun
         {
             var def = ItemDef.Get(id);
             var go = ModelFactory.Spawn(id, hazardRoot);
-            var h = new Hazard { def = def, t = go.transform, x = x, y = y, bobAmp = bob, bobPhase = Random.value * 6f };
+            var h = new Hazard { def = def, t = go.transform, x = x, y = y, bobAmp = bob, bobPhase = Random.value * 6f, width = def.size.x, vx = def.charge };
             go.transform.position = new Vector3(x, y, 0);
             if (def.kind == ItemKind.Obstacle && !def.overhead) go.transform.rotation = Quaternion.Euler(0, Random.Range(-12f, 12f), 0);
+            if (def.charge > 0) go.transform.rotation = Quaternion.Euler(0, -28f, 0);   // faces the player while charging
             hazards.Add(h);
             return h;
         }
@@ -569,6 +759,15 @@ namespace WeddingRun
 
             if (r < df.wObstacle)
             {
+                // ---- Nagoya: the miso-katsu pig charges at you (jump!)
+                if (s.theme == 3 && Random.value < 0.24f && ChargerFits())
+                {
+                    float px = SpawnX + 12f;
+                    Spawn(ModelId.SumoPig, px, 0);
+                    ui.Warn(new Vector3(0, 0.9f, 0));
+                    PlaySfx(SfxBank.Beep, 0.6f, 0.7f);
+                    return 14f;
+                }
                 // ---- slide under
                 if (Random.value < df.slideChance)
                 {
@@ -622,17 +821,17 @@ namespace WeddingRun
             if (r < df.wGood)
             {
                 float roll = Random.value;
-                if (roll < 0.05f && distance > 300 && !runner.HasShield)
+                if (roll < 0.10f && distance > 150 && !runner.HasShield)
                 {
                     Spawn(ModelId.Shield, x0, 2.8f, 0.25f);
                     return 1;
                 }
-                if (roll < 0.12f)
+                if (roll < 0.16f)
                 {
                     Spawn(ModelId.RedPacket, x0, Random.value < 0.5f ? 0.95f : 2.8f, 0.15f);
                     return 1;
                 }
-                if (roll < 0.26f)
+                if (roll < 0.29f)
                 {
                     // Ring high above — needs a long press or double jump.
                     Spawn(ModelId.Heart, x0 - 3f, 1.0f);
@@ -663,6 +862,19 @@ namespace WeddingRun
             return 4;
         }
 
+        /// <summary>A charger must not reach the player too soon after the previous obstacle.</summary>
+        bool ChargerFits()
+        {
+            float arrive = (SpawnX + 12f - CoupleRunner.GroomX) / (speed + ItemDef.Get(ModelId.SumoPig).charge);
+            foreach (var h in hazards)
+            {
+                if (h.done || h.def.kind != ItemKind.Obstacle || h.x < CoupleRunner.GroomX) continue;
+                float t = (h.x - CoupleRunner.GroomX) / (speed + h.vx);
+                if (Mathf.Abs(arrive - t) < 1.0f) return false;
+            }
+            return true;
+        }
+
         ModelId PickObstacle(StageDef s, Difficulty df, bool allowTall, float maxWidth = 99f, float maxHeight = 99f)
         {
             for (int attempt = 0; attempt < 12; attempt++)
@@ -685,8 +897,12 @@ namespace WeddingRun
             for (int i = hazards.Count - 1; i >= 0; i--)
             {
                 var h = hazards[i];
-                h.x -= speed * dt;
+                bool charging = h.vx > 0 && !h.done && state == State.Playing;
+                h.x -= (speed + (charging ? h.vx : 0f)) * dt;
                 float bob = h.bobAmp > 0 ? Mathf.Sin(Time.time * 2.6f + h.bobPhase) * h.bobAmp : 0;
+                if (charging) bob = Mathf.Abs(Mathf.Sin(Time.time * 14f + h.bobPhase)) * 0.22f;   // stomping run
+                if (charging && Random.value < dt * 25f && h.x < SpawnX)
+                    env.Burst(new Vector3(h.x + 0.6f, 0.1f, 0), new Color(0.9f, 0.85f, 0.8f, 0.8f), 2, 0.4f);
                 if (h.t)
                 {
                     h.t.position = new Vector3(h.x, h.y + bob, 0);
@@ -713,7 +929,7 @@ namespace WeddingRun
             }
             if (h.def.kind == ItemKind.Obstacle)
             {
-                float w = h.def.size.x * 0.8f, ht = h.def.size.y * 0.88f;
+                float w = h.width * 0.8f, ht = h.def.size.y * 0.88f;
                 return new Rect(h.x - w / 2, 0, w, ht).Overlaps(p);
             }
             float r = h.def.radius * (h.def.kind == ItemKind.Bad ? 0.85f : 1.1f);
@@ -730,10 +946,10 @@ namespace WeddingRun
             {
                 case ItemKind.Obstacle:
                     if (invulnerable > 0) return;
-                    if (runner.HasShield)
+                    if (runner.HasShield || debugInvincible)
                     {
                         h.done = true;
-                        runner.SetShield(false);
+                        if (!debugInvincible) runner.SetShield(false);
                         ui.SetShield(false);
                         invulnerable = 0.6f;
                         shake = 0.3f;
@@ -797,8 +1013,16 @@ namespace WeddingRun
             foreach (var h in hazards)
             {
                 if (h.done || h.def.kind != ItemKind.Obstacle) continue;
-                float ahead = h.x - h.def.size.x / 2 - CoupleRunner.GroomX;
-                if (h.x + h.def.size.x / 2 < CoupleRunner.GroomX - 0.4f) continue;
+                float ahead = h.x - h.width / 2 - CoupleRunner.GroomX;
+                if (h.x + h.width / 2 < CoupleRunner.GroomX - 0.4f) continue;
+                float closing = speed + h.vx;
+                if (h.vx > 0)
+                {
+                    if (ahead < 0 || ahead > closing * 0.3f + 1.2f) continue;
+                    if (runner.Grounded) pressed = true;
+                    held = true;
+                    return;
+                }
                 if (h.def.overhead)
                 {
                     if (ahead > speed * 0.2f + 0.8f) continue;

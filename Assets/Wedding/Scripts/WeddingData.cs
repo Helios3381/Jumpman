@@ -18,7 +18,9 @@ namespace WeddingRun
         // game over
         Cone, Barrier, GiftStack1, GiftStack2, GiftStack3, LiquorJar, BrickWall, Scooter, Suitcase, ChampagneTower,
         // game over unless you slide under
-        OverheadSign, OverheadBanner, OverheadFirecracker, OverheadNoren, OverheadGarland
+        OverheadSign, OverheadBanner, OverheadFirecracker, OverheadNoren, OverheadGarland,
+        // special obstacles
+        SumoPig                                    // Nagoya miso pig: charges at you — jump!
     }
 
     public class ItemDef
@@ -34,6 +36,7 @@ namespace WeddingRun
         public Vector2 size;       // obstacles: width / height
         public bool tall;          // needs a high jump
         public bool overhead;      // hangs above the road: slide under it
+        public float charge;       // extra speed: runs towards the player
         public const float OverheadClearance = 1.15f; // bottom edge of overhead obstacles
 
         public static readonly Dictionary<ModelId, ItemDef> All = new Dictionary<ModelId, ItemDef>();
@@ -76,6 +79,7 @@ namespace WeddingRun
             Add(new ItemDef { id = ModelId.OverheadBanner, nameEn = "Red Banner", nameJa = "赤い横断幕", kind = ItemKind.Obstacle, nameZh = "紅布條", size = new Vector2(2.0f, 0), overhead = true });
             Add(new ItemDef { id = ModelId.OverheadFirecracker, nameEn = "Firecrackers", nameJa = "爆竹", kind = ItemKind.Obstacle, nameZh = "鞭炮串", size = new Vector2(1.8f, 0), overhead = true });
             Add(new ItemDef { id = ModelId.OverheadNoren, nameEn = "Noren Curtain", nameJa = "のれん", kind = ItemKind.Obstacle, nameZh = "暖簾", size = new Vector2(2.0f, 0), overhead = true });
+            Add(new ItemDef { id = ModelId.SumoPig, nameEn = "Miso Pig", nameJa = "味噌ブタ", kind = ItemKind.Obstacle, nameZh = "味噌豬", size = new Vector2(1.3f, 1.5f), charge = 7f });
             Add(new ItemDef { id = ModelId.OverheadGarland, nameEn = "Wedding Garland", nameJa = "「囍」ガーランド", kind = ItemKind.Obstacle, nameZh = "囍字彩帶", size = new Vector2(2.1f, 0), overhead = true });
         }
 
@@ -104,6 +108,8 @@ namespace WeddingRun
         public ModelId overhead;   // slide-under obstacle for this city
         public Color skyTop, skyBottom, fog, farGround, midGround, road, roadLine, curb, light, ambient, petalA, petalB;
         public float lightIntensity = 1.1f;
+        public float glow = 0.45f;  // how much the sun/moon light tints the horizon
+        public float trueSky;       // 1 = sky gradient shows the authored colours (linear colour-space correction)
         public float startDistance; // within a lap (filled in automatically)
     }
 
@@ -140,10 +146,11 @@ namespace WeddingRun
                 index = 1, theme = 2, shortName = "台北", nameZh = "台北", nameEn = "TAIPEI", nameJa = "台北", shortEn = "Taipei", shortJa = "台北", length = 350, brideJoins = true,
                 food = ModelId.BubbleTea, overhead = ModelId.OverheadBanner,
                 obstacles = new[] { ModelId.Scooter, ModelId.Cone, ModelId.GiftStack1, ModelId.GiftStack2, ModelId.GiftStack3, ModelId.Barrier },
-                skyTop = C("#4B3D8F"), skyBottom = C("#FFB27A"), fog = C("#D99A8F"), farGround = C("#4F6B5A"), midGround = C("#8A7F8E"),
-                road = C("#5A5862"), roadLine = C("#FFFFFF"), curb = C("#B9B3BE"),
-                light = C("#FFD2A8"), ambient = C("#A88FA8"), lightIntensity = 1.05f,
-                petalA = C("#FFC27A"), petalB = C("#FF7A8A"),
+                // night market at night
+                skyTop = C("#0E1033"), skyBottom = C("#4A3778"), fog = C("#3A3060"), farGround = C("#272A3E"), midGround = C("#4B4254"),
+                road = C("#403C48"), roadLine = C("#F6E7A6"), curb = C("#7A7084"),
+                light = C("#FFC98F"), ambient = C("#6A5A88"), lightIntensity = 0.8f,
+                petalA = C("#FFB347"), petalB = C("#FF6B6B"),
             },
             new StageDef {
                 index = 2, theme = 1, shortName = "金門", nameZh = "金門", nameEn = "KINMEN", nameJa = "金門", shortEn = "Kinmen", shortJa = "金門", length = 400,
@@ -175,6 +182,23 @@ namespace WeddingRun
         };
 
         /// <summary>First lap: all 5 stages including the wedding venue.</summary>
+        /// <summary>
+        /// Second half of the Nagoya stage (first lap): Garden Pier at the Port of Nagoya at night — where he proposed.
+        /// Same stage (progress bar / banner stay "名古屋"), only the scenery changes.
+        /// </summary>
+        public static readonly StageDef Port = new StageDef
+        {
+            index = 3, theme = 5, shortName = "名古屋", nameZh = "名古屋港", nameEn = "PORT OF NAGOYA", nameJa = "名古屋港",
+            shortEn = "Nagoya", shortJa = "名古屋", length = 0,
+            food = ModelId.EbiFry, food2 = ModelId.MisoKatsu, overhead = ModelId.OverheadNoren,
+            obstacles = new[] { ModelId.Suitcase, ModelId.Cone, ModelId.Barrier, ModelId.GiftStack1, ModelId.GiftStack2, ModelId.GiftStack3 },
+            skyTop = C("#0B0E2E"), skyBottom = C("#33295E"), fog = C("#262148"), farGround = C("#1A3360"), midGround = C("#4A4558"),
+            road = C("#3A3644"), roadLine = C("#F6E7A6"), curb = C("#6A6476"),
+            light = C("#FFD8A8"), ambient = C("#564C7E"), lightIntensity = 0.75f, glow = 0.22f, trueSky = 1f,
+            petalA = C("#FFE6A8"), petalB = C("#FFB0C8"),
+        };
+        public const float PortFrom = 0.5f;   // fraction of the Nagoya stage where the port begins
+
         public static readonly float FirstLapLength;
         /// <summary>Later laps loop the 4 cities only (the wedding already happened).</summary>
         public static readonly float LoopLength;
@@ -190,6 +214,7 @@ namespace WeddingRun
 
         public static StageDef ByTheme(int theme)
         {
+            if (theme == Port.theme) return Port;
             foreach (var s in List) if (s.theme == theme) return s;
             return List[0];
         }
@@ -214,6 +239,21 @@ namespace WeddingRun
             int idx = 0;
             for (int i = 0; i < count; i++) if (d >= List[i].startDistance) idx = i;
             return idx;
+        }
+
+        /// <summary>0..1 progress through the current stage.</summary>
+        public static float StageProgress(float distance)
+        {
+            int i = IndexAt(distance);
+            return Mathf.Clamp01((LocalDistance(distance) - List[i].startDistance) / List[i].length);
+        }
+
+        /// <summary>Visual theme at this distance (on the first lap Nagoya switches to the port halfway through).</summary>
+        public static int ThemeAt(float distance)
+        {
+            int i = IndexAt(distance);
+            if (List[i].theme == 3 && LapAt(distance) == 0 && StageProgress(distance) >= PortFrom) return Port.theme;   // the port: first lap only
+            return List[i].theme;
         }
 
         /// <summary>Absolute distance where stage <paramref name="index"/> of lap <paramref name="lap"/> starts.</summary>
