@@ -14,8 +14,8 @@ namespace WeddingRun
     public class WeddingGame : MonoBehaviour
     {
         [Header("Couple")]
-        public string groomName = "新郎";
-        public string brideName = "新娘";
+        public string groomName = "凱銘";
+        public string brideName = "詠萱";
         public string weddingDate = "2027.01.01";
 
         [Header("Assets (assigned by Tools > Wedding Run > Build Scene)")]

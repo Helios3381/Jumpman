@@ -164,13 +164,15 @@ namespace WeddingRun
             musicBtn = Btn(title, "音樂 ON", new Vector2(1, 1), new Vector2(-330, -70), new Vector2(220, 80), Style.Secondary, () => { game.ToggleMusic(); RefreshSoundButtons(); }, 32);
             sfxBtn = Btn(title, "音效 ON", new Vector2(1, 1), new Vector2(-110, -70), new Vector2(200, 80), Style.Secondary, () => { game.ToggleSfx(); RefreshSoundButtons(); }, 32);
 
-            var start = Btn(title, T("開始遊戲  START", "START", "スタート"), new Vector2(0.5f, 0), new Vector2(0, 250), new Vector2(620, 130), Style.Primary, game.StartRun, 54);
+            var start = Btn(title, T("開始遊戲  START", "START", "スタート"), new Vector2(0.5f, 0), new Vector2(0, 262), new Vector2(620, 130), Style.Primary, game.StartRun, 54);
             UIKit.Run(Breathe(start.transform.Find("Bg")));
-            Btn(title, T("玩法說明", "How to Play", "遊び方"), new Vector2(0.5f, 0), new Vector2(OnlineRanking.Available ? -170 : 0, 110), new Vector2(310, 96), Style.Secondary, OpenHowTo, 38);
+            Btn(title, T("玩法說明", "How to Play", "遊び方"), new Vector2(0.5f, 0), new Vector2(OnlineRanking.Available ? -170 : 0, 124), new Vector2(310, 96), Style.Secondary, OpenHowTo, 38);
             if (OnlineRanking.Available)
-                Btn(title, T("排行榜", "Ranking", "ランキング"), new Vector2(0.5f, 0), new Vector2(170, 110), new Vector2(310, 96), Style.Gold, OpenRanking, 38);
+                Btn(title, T("排行榜", "Ranking", "ランキング"), new Vector2(0.5f, 0), new Vector2(170, 124), new Vector2(310, 96), Style.Gold, OpenRanking, 38);
 
-            Label(title, T("點擊畫面 / 空白鍵：跳躍（按住更高、空中再點一次＝二段跳）　·　往下滑 / ↓：滑行", "Tap / Space: Jump (hold = higher, tap again in the air = double jump)  ·  Swipe down / ↓: Slide", "タップ / スペース：ジャンプ（長押しで高く・空中でもう一度＝2段ジャンプ）　·　下スワイプ / ↓：スライド"), 30, new Color(1, 1, 1, 0.9f), new Vector2(0.5f, 0), new Vector2(0, 32), new Vector2(1800, 50), TextAlignmentOptions.Center, false);
+            Label(title, T("點擊畫面 / 空白鍵：跳躍（按住更高、空中再點一次＝二段跳）　·　往下滑 / ↓：滑行", "Tap / Space: Jump (hold = higher, tap again in the air = double jump)  ·  Swipe down / ↓: Slide", "タップ / スペース：ジャンプ（長押しで高く・空中でもう一度＝2段ジャンプ）　·　下スワイプ / ↓：スライド"), 30, new Color(1, 1, 1, 0.9f), new Vector2(0.5f, 0), new Vector2(0, 62), new Vector2(1800, 50), TextAlignmentOptions.Center, false);
+            var copyright = Label(title, "©2026 Helios Studios All rights reserved.", 22, new Color(1, 1, 1, 0.78f), new Vector2(1, 0), new Vector2(-374, 22), new Vector2(700, 30), TextAlignmentOptions.BottomRight, false);
+            copyright.enableWordWrapping = false;
             portraitHint = Label(title, T("橫向螢幕遊玩體驗更佳", "Best played in landscape", "スマホを横にして遊んでね"), 34, Palette.Gold, new Vector2(0.5f, 0), new Vector2(0, 400), new Vector2(1600, 60));
         }
 
