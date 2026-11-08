@@ -88,23 +88,12 @@ namespace WeddingRun.EditorTools
             game.unlitMaterial = unlit;
             game.vertexColorMaterial = vertex;
             game.fadeMaterial = fade;
-            game.fontBold = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Fonts/MSJHBD SDF.asset");
-            // One font only: every extra CJK font adds 10-20 MB to the WebGL download.
-            game.fontRegular = game.fontBold;
-            game.fontJapanese = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Fonts/BIZ-UDMINCHOM SDF.asset");
-            if (game.fontJapanese != null)
-            {
-                game.fontJapanese.isMultiAtlasTexturesEnabled = true;
-                if (game.fontBold.fallbackFontAssetTable == null) game.fontBold.fallbackFontAssetTable = new System.Collections.Generic.List<TMP_FontAsset>();
-                if (!game.fontBold.fallbackFontAssetTable.Contains(game.fontJapanese)) game.fontBold.fallbackFontAssetTable.Add(game.fontJapanese);
-                EditorUtility.SetDirty(game.fontJapanese);
-                EditorUtility.SetDirty(game.fontBold);
-            }
-            if (game.fontBold != null && !game.fontBold.isMultiAtlasTexturesEnabled)
-            {
-                game.fontBold.isMultiAtlasTexturesEnabled = true;
-                EditorUtility.SetDirty(game.fontBold);
-            }
+            // Static subset fonts (only the characters used in the scripts): the dynamic CJK fonts would ship
+            // the whole .TTC files (~20 MB) with the WebGL build.
+            var (fontBold, fontJapanese) = FontSubsetter.Ensure();
+            game.fontBold = fontBold;
+            game.fontRegular = fontBold;
+            game.fontJapanese = fontJapanese;
             game.music = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/BGM/Theme.mp3");
             game.gameOverMusic = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/BGM/Gameover.wav");
             game.jumpSound = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Course Library/Sound/SFX/jump1.wav");
@@ -153,10 +142,55 @@ namespace WeddingRun.EditorTools
             PlayerSettings.WebGL.decompressionFallback = true;
             // Unique file names per build so browsers never mix an old cached loader with new data files.
             PlayerSettings.WebGL.nameFilesAsHashes = true;
+            ShrinkWebGL();
             if (System.IO.Directory.Exists("Builds/JumpmanGL")) System.IO.Directory.Delete("Builds/JumpmanGL", true);
             // Output folder name = file prefix, so this matches the wedding site's JumpmanGL/ folder.
             var report = BuildPipeline.BuildPlayer(new[] { ScenePath }, "Builds/JumpmanGL", BuildTarget.WebGL, BuildOptions.None);
             Debug.Log("[WeddingRun] WebGL build: " + report.summary.result);
+        }
+
+        /// <summary>Download-size settings for the web build (guests open it on phones over mobile data).</summary>
+        static void ShrinkWebGL()
+        {
+            var webgl = UnityEditor.Build.NamedBuildTarget.WebGL;
+            // Strip unused managed code (old Jumpman scripts, Unity Services …) and generate smaller IL2CPP code.
+            PlayerSettings.SetManagedStrippingLevel(webgl, ManagedStrippingLevel.Medium);
+            PlayerSettings.SetIl2CppCodeGeneration(webgl, UnityEditor.Build.Il2CppCodeGeneration.OptimizeSize);
+            PlayerSettings.stripEngineCode = true;
+            SetWasmCodeOptimization("DiskSize");
+
+            // Background music was imported at 100 % quality (≈5 MB of the download). WebGL has no per-platform audio
+            // override, so the default settings are lowered: 35 % at 32 kHz still sounds fine on phone speakers.
+            foreach (var path in new[] { "Assets/BGM/Theme.mp3", "Assets/BGM/Gameover.wav" })
+            {
+                if (!(AssetImporter.GetAtPath(path) is AudioImporter imp)) continue;
+                var s = imp.defaultSampleSettings;
+                if (Mathf.Approximately(s.quality, 0.35f) && s.sampleRateSetting == AudioSampleRateSetting.OverrideSampleRate && s.sampleRateOverride == 32000) continue;
+                s.quality = 0.35f;
+                s.sampleRateSetting = AudioSampleRateSetting.OverrideSampleRate;
+                s.sampleRateOverride = 32000;
+                imp.defaultSampleSettings = s;
+                imp.SaveAndReimport();
+                Debug.Log("[WeddingRun] music import settings lowered: " + path);
+            }
+        }
+
+        /// <summary>Build Settings > Code Optimization (WebGL), set via reflection so this compiles without the WebGL module.</summary>
+        static void SetWasmCodeOptimization(string value)
+        {
+            foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (!asm.GetName().Name.StartsWith("UnityEditor.WebGL")) continue;
+                foreach (var t in asm.GetTypes())
+                {
+                    var prop = t.GetProperty("codeOptimization", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    if (prop == null || !prop.PropertyType.IsEnum || !prop.CanWrite) continue;
+                    prop.SetValue(null, System.Enum.Parse(prop.PropertyType, value));
+                    Debug.Log("[WeddingRun] WebGL code optimization: " + prop.GetValue(null));
+                    return;
+                }
+            }
+            Debug.LogWarning("[WeddingRun] WebGL code optimization setting not found");
         }
     }
 }

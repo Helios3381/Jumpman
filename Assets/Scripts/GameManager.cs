@@ -2,13 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using Unity.Services.Leaderboards;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
-using Unity.Services.Core;
-using Unity.Services.Authentication;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 
@@ -65,14 +62,12 @@ public class GameManager : MonoBehaviour
     [DllImport("__Internal")]
     private static extern void GameOverAndSendScore(float score);
 
-    async void Awake()
+    void Awake()
     {
         if (!isWebGL())
         {
-            //load ugs only in normal mode
-            await InitializeUGS();
-            //get player best score
-            bestScore = await GetBestScore();
+            //get player best score (saved on this device)
+            bestScore = GetBestScore();
             bestText.text = "最佳得分: " + bestScore.ToString("F2") + "m";
         }
     }
@@ -120,18 +115,6 @@ public class GameManager : MonoBehaviour
                 StartCoroutine(ShowNewRecord());
             }
         }
-    }
-
-    async Task InitializeUGS()
-    {
-        await UnityServices.InitializeAsync();
-
-        if (!AuthenticationService.Instance.IsSignedIn)
-        {
-            await AuthenticationService.Instance.SignInAnonymouslyAsync();
-        }
-
-        Debug.Log("UGS Initialized & Signed In");
     }
 
     public void newGame()
@@ -235,9 +218,9 @@ public class GameManager : MonoBehaviour
         newRecordAlertText.gameObject.SetActive(false);
     }
 
-    private async Task<double> GetBestScore()
+    private double GetBestScore()
     {
-        return (await GetMyBestScore()) ?? 0f;
+        return GetMyBestScore() ?? 0f;
     }
 
     public void GetResult()
@@ -250,46 +233,45 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public async void SubmitScore()
-    {
-        //submit score to server
-        var metadata = new Dictionary<string, string>()
-            {
-                { "name", rankingNameInputField.text }
-            };
+    // The online leaderboard (Unity Gaming Services) was removed: it added several MB to the wedding site's WebGL
+    // download. Scores are now kept on this device (PlayerPrefs).
+    [System.Serializable]
+    class LocalBoard { public List<LocalEntry> entries = new List<LocalEntry>(); }
 
-        await LeaderboardsService.Instance.AddPlayerScoreAsync(
-            leaderboardID,
-            score,
-            new AddPlayerScoreOptions { Metadata = metadata }
-        );
+    [System.Serializable]
+    class LocalEntry { public string name; public double score; }
+
+    string BoardKey => "local_board_" + leaderboardID;
+
+    LocalBoard LoadBoard()
+    {
+        var json = PlayerPrefs.GetString(BoardKey, "");
+        return string.IsNullOrEmpty(json) ? new LocalBoard() : (JsonUtility.FromJson<LocalBoard>(json) ?? new LocalBoard());
+    }
+
+    public void SubmitScore()
+    {
+        //save score on this device
+        var board = LoadBoard();
+        string playerName = rankingNameInputField != null ? rankingNameInputField.text : "";
+        board.entries.Add(new LocalEntry { name = string.IsNullOrWhiteSpace(playerName) ? "Unknown" : playerName.Trim(), score = score });
+        board.entries.Sort((a, b) => b.score.CompareTo(a.score));
+        if (board.entries.Count > 5) board.entries.RemoveRange(5, board.entries.Count - 5);
+        PlayerPrefs.SetString(BoardKey, JsonUtility.ToJson(board));
+        PlayerPrefs.Save();
         RestartGame();
     }
 
-    public async Task<double?> GetMyBestScore()
+    public double? GetMyBestScore()
     {
-        try
-        {
-            var response = await LeaderboardsService.Instance.GetPlayerScoreAsync(leaderboardID);
-            return response.Score;
-        }
-        catch
-        {
-            // No Record
-            return null;
-        }
+        var board = LoadBoard();
+        if (board.entries.Count == 0) return null;   // No Record
+        return board.entries[0].score;
     }
 
-    public async void GetTop5Scores()
+    public void GetTop5Scores()
     {
-        var options = new GetScoresOptions
-        {
-            Limit = 5,
-            IncludeMetadata = true
-        };
-
-        var scoresResponse = await LeaderboardsService.Instance
-            .GetScoresAsync(leaderboardID, options);
+        var entries = LoadBoard().entries;
 
         TextMeshProUGUI[] nameTexts =
         { top1Name, top2Name, top3Name, top4Name, top5Name };
@@ -303,30 +285,11 @@ public class GameManager : MonoBehaviour
             scoreTexts[i].text = "-";
         }
 
-        for (int i = 0; i < scoresResponse.Results.Count && i < 5; i++)
+        for (int i = 0; i < entries.Count && i < 5; i++)
         {
-            var entry = scoresResponse.Results[i];
-
-            string name = "Unknown";
-
-            if (!string.IsNullOrEmpty(entry.Metadata))
-            {
-                PlayerMetadata meta =
-                    JsonUtility.FromJson<PlayerMetadata>(entry.Metadata);
-
-                if (meta != null && !string.IsNullOrEmpty(meta.name))
-                    name = meta.name;
-            }
-
-            nameTexts[i].text = name;
-            scoreTexts[i].text = entry.Score.ToString("F2");
+            nameTexts[i].text = entries[i].name;
+            scoreTexts[i].text = entries[i].score.ToString("F2");
         }
-    }
-
-    [System.Serializable]
-    public class PlayerMetadata
-    {
-        public string name;
     }
 
     private bool isWebGL()

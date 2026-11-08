@@ -2,95 +2,23 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Unity.Services.Authentication;
-using Unity.Services.Core;
-using Unity.Services.Leaderboards;
 using UnityEngine;
 
 namespace WeddingRun
 {
-    /// <summary>Unity Gaming Services leaderboard (standalone builds only — same rule as before).</summary>
+    /// <summary>
+    /// In-game online ranking — switched off. The wedding site keeps its own ranking (Firebase, fed by
+    /// <see cref="Platform.SendScoreToPage"/>), and the Unity Gaming Services packages it needed added several MB
+    /// to the WebGL download, so they were removed. The API stays so the (hidden) ranking UI still compiles.
+    /// </summary>
     public static class OnlineRanking
     {
         public static string LeaderboardId = "highscores";
-        static Task<bool> initTask;
-
-        public static bool Available => !Platform.IsWebGL;
-
-        public static Task<bool> Init()
-        {
-            if (!Available) return Task.FromResult(false);
-            return initTask ??= InitInternal();
-        }
-
-        static async Task<bool> InitInternal()
-        {
-            try
-            {
-                if (UnityServices.State != ServicesInitializationState.Initialized)
-                    await UnityServices.InitializeAsync();
-                if (!AuthenticationService.Instance.IsSignedIn)
-                    await AuthenticationService.Instance.SignInAnonymouslyAsync();
-                return true;
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning("[Ranking] init failed: " + e.Message);
-                initTask = null;
-                return false;
-            }
-        }
-
-        public static async Task<double?> MyBest()
-        {
-            if (!await Init()) return null;
-            try { return (await LeaderboardsService.Instance.GetPlayerScoreAsync(LeaderboardId)).Score; }
-            catch { return null; }
-        }
-
-        public static async Task<bool> Submit(string name, double score)
-        {
-            if (!await Init()) return false;
-            try
-            {
-                var meta = new Dictionary<string, string> { { "name", string.IsNullOrWhiteSpace(name) ? "Guest" : name.Trim() } };
-                await LeaderboardsService.Instance.AddPlayerScoreAsync(LeaderboardId, score, new AddPlayerScoreOptions { Metadata = meta });
-                return true;
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning("[Ranking] submit failed: " + e.Message);
-                return false;
-            }
-        }
-
-        [Serializable] class Meta { public string name; }
-
-        public static async Task<List<KeyValuePair<string, double>>> Top(int count)
-        {
-            var list = new List<KeyValuePair<string, double>>();
-            if (!await Init()) return null;
-            try
-            {
-                var res = await LeaderboardsService.Instance.GetScoresAsync(LeaderboardId, new GetScoresOptions { Limit = count, IncludeMetadata = true });
-                foreach (var e in res.Results)
-                {
-                    string n = "Guest";
-                    if (!string.IsNullOrEmpty(e.Metadata))
-                    {
-                        var m = JsonUtility.FromJson<Meta>(e.Metadata);
-                        if (m != null && !string.IsNullOrEmpty(m.name)) n = m.name;
-                    }
-                    list.Add(new KeyValuePair<string, double>(n, e.Score));
-                }
-                return list;
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning("[Ranking] fetch failed: " + e.Message);
-                return null;
-            }
-        }
+        public static bool Available => false;
+        public static Task<bool> Init() => Task.FromResult(false);
+        public static Task<double?> MyBest() => Task.FromResult<double?>(null);
+        public static Task<bool> Submit(string name, double score) => Task.FromResult(false);
+        public static Task<List<KeyValuePair<string, double>>> Top(int count) => Task.FromResult<List<KeyValuePair<string, double>>>(null);
     }
 
     public static class Platform

@@ -1042,6 +1042,7 @@ namespace WeddingRun
         // ------------------------------------------------------------------ web page bridge (WebGL)
 
         /// <summary>Called by the wedding web page when the guest enters full screen.</summary>
+        [UnityEngine.Scripting.Preserve]   // called from JavaScript via SendMessage
         public void WebStartBGM()
         {
             webAudioAllowed = true;
@@ -1049,6 +1050,7 @@ namespace WeddingRun
         }
 
         /// <summary>Called by the wedding web page when the guest leaves full screen: stop music and pause.</summary>
+        [UnityEngine.Scripting.Preserve]
         public void WebStopBGM()
         {
             musicSource.Stop();

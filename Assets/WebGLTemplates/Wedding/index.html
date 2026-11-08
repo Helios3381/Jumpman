@@ -47,6 +47,9 @@
         symbolsUrl: buildUrl + "/{{{ SYMBOLS_FILENAME }}}",
 #endif
         streamingAssetsUrl: "StreamingAssets",
+        // File names are content hashes (a new build = new names), so cached copies never need re-checking:
+        // repeat visits start straight from the browser's IndexedDB cache without touching the network.
+        cacheControl: function (url) { return /\.unityweb$/.test(url) ? "immutable" : "no-store"; },
         companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
         productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
         productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
