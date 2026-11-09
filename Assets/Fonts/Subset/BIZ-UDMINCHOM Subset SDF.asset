@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: BIZ-UDMINCHOM Subset SDF
   m_EditorClassIdentifier: 
   hashCode: 0
-  material: {fileID: 8929757678667861480}
+  material: {fileID: 1675273708625996834}
   materialHashCode: -2006316128
   m_Version: 1.1.0
   m_SourceFontFileGUID: e1289a284b30760478d58c11aeb994c8
@@ -83,7 +83,7 @@ MonoBehaviour:
     m_GlyphIndex: 575
     m_Scale: 1
   m_AtlasTextures:
-  - {fileID: 6787896567611692756}
+  - {fileID: 750198294184919410}
   m_AtlasTextureIndex: 0
   m_IsMultiAtlasTexturesEnabled: 1
   m_ClearDynamicDataOnBuild: 0
@@ -184,7 +184,7 @@ MonoBehaviour:
   boldSpacing: 7
   italicStyle: 35
   tabSize: 10
---- !u!28 &6787896567611692756
+--- !u!28 &750198294184919410
 Texture2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -232,7 +232,7 @@ Texture2D:
     offset: 0
     size: 0
     path: 
---- !u!21 &8929757678667861480
+--- !u!21 &1675273708625996834
 Material:
   serializedVersion: 8
   m_ObjectHideFlags: 0
@@ -268,7 +268,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 6787896567611692756}
+        m_Texture: {fileID: 750198294184919410}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OutlineTex:

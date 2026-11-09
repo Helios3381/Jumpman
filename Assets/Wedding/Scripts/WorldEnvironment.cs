@@ -129,6 +129,7 @@ namespace WeddingRun
             from = stage >= 0 && !instant ? CurrentBlend() : def;
             to = def;
             blend = instant ? 1 : 0;
+            int previous = stage;
             stage = index;
 
             foreach (var s in strips)
@@ -149,7 +150,8 @@ namespace WeddingRun
                 Place(s);
             }
 
-            if (index == 5)
+            // nobody at the night-time port, and only Kinmen has elderly villagers: clear whoever is still off-screen ahead
+            if (index == 5 || index == KinmenTheme || previous == KinmenTheme)
                 for (int i = walkers.Count - 1; i >= 0; i--)
                     if (walkers[i].x > 12f || instant) { Destroy(walkers[i].p.root.gameObject); walkers.RemoveAt(i); }
 
@@ -227,6 +229,7 @@ namespace WeddingRun
 
         // ------------------------------------------------------------------ passers-by
 
+        const int KinmenTheme = 1;
         class Walker { public ModelFactory.Person p; public float x, y, z, dir, pace, phase; public bool watcher; }
         readonly List<Walker> walkers = new List<Walker>();
         /// <summary>While true (the proposal), passers-by stop and watch the couple.</summary>
@@ -271,11 +274,12 @@ namespace WeddingRun
                 w.x += (w.dir * w.pace - speed) * dt;
                 w.phase += dt * w.pace * 5.5f;
                 float sw = Mathf.Sin(w.phase);
-                w.p.legL.localRotation = Quaternion.Euler(0, 0, sw * 28f);
-                w.p.legR.localRotation = Quaternion.Euler(0, 0, -sw * 28f);
-                w.p.armL.localRotation = Quaternion.Euler(0, 0, -sw * 22f);
-                w.p.armR.localRotation = Quaternion.Euler(0, 0, w.p.armR.childCount > 2 ? sw * 8f : sw * 22f);
-                w.p.body.localPosition = new Vector3(0, Mathf.Abs(Mathf.Cos(w.phase)) * 0.04f, 0);
+                float stride = w.p.elder ? 18f : 28f, armSwing = w.p.elder ? 10f : 22f;
+                w.p.legL.localRotation = Quaternion.Euler(0, 0, sw * stride);
+                w.p.legR.localRotation = Quaternion.Euler(0, 0, -sw * stride);
+                w.p.armL.localRotation = Quaternion.Euler(0, 0, w.p.elder ? ModelFactory.CaneArmAngle - sw * 3f : -sw * armSwing);
+                w.p.armR.localRotation = Quaternion.Euler(0, 0, w.p.armR.childCount > 2 ? sw * 8f : sw * armSwing);
+                w.p.body.localPosition = new Vector3(0, Mathf.Abs(Mathf.Cos(w.phase)) * (w.p.elder ? 0.015f : 0.04f), 0);
                 w.p.root.localPosition = new Vector3(w.x, w.y, w.z);
                 if (w.x < -26f || w.x > 32f)
                 {
@@ -287,13 +291,15 @@ namespace WeddingRun
 
         void SpawnWalker(float speed)
         {
-            var w = new Walker { dir = Random.value < 0.5f ? -1f : 1f, pace = Random.Range(1.1f, 1.7f), phase = Random.value * 6f };
+            bool elder = stage == KinmenTheme;
+            var w = new Walker { dir = Random.value < 0.5f ? -1f : 1f, pace = elder ? Random.Range(0.8f, 1.1f) : Random.Range(1.1f, 1.7f), phase = Random.value * 6f };
             bool front = stage != 4 && !Spectate && Random.value < 0.25f;   // wedding watchers line the far pavement only
             w.z = front ? Random.Range(-6.2f, -5.4f) : Random.Range(3.3f, 4.5f);
             w.y = front ? 0.05f : 0.12f;
             w.x = speed > 2f ? 27f : (w.dir > 0 ? -24f : 27f);
             if (stage == 4 || Spectate) { w.watcher = true; w.x = speed > 2f ? 27f : Random.Range(-14f, 14f); }
-            w.p = ModelFactory.BuildPerson(transform, 7000 + walkerSeed++ * 13, true);
+            w.p = ModelFactory.BuildPerson(transform, 7000 + walkerSeed++ * 13, true, elder);
+            if (elder && front) w.p.body.localScale *= 0.82f;   // the near pavement is closer to the camera
             w.p.root.localRotation = Quaternion.Euler(0, w.dir > 0 ? 20f : 160f, 0);
             w.p.root.localPosition = new Vector3(w.x, w.y, w.z);
             walkers.Add(w);

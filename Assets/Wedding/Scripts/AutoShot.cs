@@ -61,8 +61,18 @@ namespace WeddingRun
                     Shot("07c_pig_warning");
                     yield return new WaitForSecondsRealtime(0.45f);
                     Shot("07d_pig_charge");
-                    // Port of Nagoya and the proposal (first lap)
-                    game.DebugJumpTo(Stages.StartOf(0, 3) + Stages.List[3].length - 95f);
+                }
+                if (Stages.List[s].theme == 1)
+                {
+                    yield return new WaitForSecondsRealtime(3f);
+                    Shot($"0{4 + s}c_kinmen_elders");
+                    yield return new WaitForSecondsRealtime(0.25f);
+                    Shot($"0{4 + s}d_kinmen_elders");
+                }
+                if (Stages.List[s].theme == 5)
+                {
+                    // the proposal (first lap)
+                    game.DebugJumpTo(WeddingGame.ProposeAt - 47f);
                     yield return new WaitForSecondsRealtime(1.5f); Shot("07e_port");
                     yield return new WaitForSecondsRealtime(3.4f); Shot("07f_propose_kneel");
                     yield return new WaitForSecondsRealtime(1.5f); Shot("07g_propose_yes");
@@ -70,6 +80,10 @@ namespace WeddingRun
                     yield return new WaitForSecondsRealtime(2.3f);
                 }
             }
+            game.DebugLineup(new[] { ModelId.Heart, ModelId.PineappleBun, ModelId.BubbleTea, ModelId.GongCandy, ModelId.EbiFry, ModelId.MisoKatsu, ModelId.Rose, ModelId.WeddingCookie }, 1f, 5.8f, 2.8f);
+            game.DebugLineup(new[] { ModelId.AlarmClock, ModelId.Briefcase, ModelId.RainCloud }, 3f, 3.4f, 3f);
+            yield return new WaitForSecondsRealtime(0.25f);
+            Shot("08b_new_items");
             game.DebugForceSlide();
             yield return new WaitForSecondsRealtime(0.15f);
             Shot("08c_slide");

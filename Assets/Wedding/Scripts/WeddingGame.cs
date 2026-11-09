@@ -73,7 +73,7 @@ namespace WeddingRun
         const float SpawnX = 22f, DespawnX = -18f;
         const float TitleSpeed = 7f;
 
-        int Score => Mathf.Max(0, Mathf.FloorToInt(distance) + itemScore);
+        int Score => Mathf.Max(0, Stages.DistancePoints(distance) + itemScore);
         float Multiplier => combo >= 10 ? 3f : combo >= 6 ? 2f : combo >= 3 ? 1.5f : 1f;
 
         // ------------------------------------------------------------------ setup
@@ -548,8 +548,8 @@ namespace WeddingRun
 
         // ------------------------------------------------------------------ wedding finale
 
-        /// <summary>The proposal happens at the Port of Nagoya, near the end of the Nagoya stage (first lap only).</summary>
-        static float ProposeAt => Stages.StartOf(0, 3) + Stages.List[3].length - 48f;
+        /// <summary>The proposal happens near the end of the Port of Nagoya stage (first lap only).</summary>
+        public static float ProposeAt => Stages.StartOf(0, Stages.PortStage) + Stages.List[Stages.PortStage].length - 48f;
 
         bool proposed;
         Coroutine proposeCo;
@@ -1061,6 +1061,11 @@ namespace WeddingRun
 
         // debug hooks for AutoShot
         public void DebugJumpTo(float d) { distance = d; }
+        /// <summary>AutoShot: lays out items in the air so the models can be checked in one picture.</summary>
+        public void DebugLineup(ModelId[] ids, float x0, float y, float step)
+        {
+            for (int i = 0; i < ids.Length; i++) Spawn(ids[i], x0 + i * step, y);
+        }
         public bool IsGameOver => state == State.GameOver;
         public void DebugKill() { if (state == State.Playing) Die(ItemDef.Get(ModelId.LiquorJar)); }
         public GameUI UI => ui;

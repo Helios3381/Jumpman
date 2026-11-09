@@ -239,6 +239,23 @@ namespace WeddingRun
                     Text3D(r, "囍", gold, new Vector3(0, 0.01f, -0.11f), 3.2f);
                     break;
 
+                case ModelId.Rose:
+                    {
+                        Color petal = H("#E8264D"), dark = H("#A8152F");
+                        Cyl(r, H("#4E9A5B"), new Vector3(0, -0.28f, 0), 0.028f, 0.74f);
+                        Ball(r, H("#5BAA6A"), new Vector3(0.14f, -0.3f, 0), new Vector3(0.28f, 0.1f, 0.08f), new Vector3(0, 0, 28));
+                        Ball(r, H("#5BAA6A"), new Vector3(-0.14f, -0.42f, 0), new Vector3(0.28f, 0.1f, 0.08f), new Vector3(0, 0, -28));
+                        Ball(r, dark, new Vector3(0, 0.26f, 0), Vector3.one * 0.44f);
+                        for (int i = 0; i < 6; i++)
+                        {
+                            float a = i * 60f * Mathf.Deg2Rad;
+                            Ball(r, petal, new Vector3(Mathf.Cos(a) * 0.19f, 0.26f + Mathf.Sin(a) * 0.17f, -0.12f), Vector3.one * 0.25f);
+                        }
+                        Ball(r, dark, new Vector3(0, 0.26f, -0.24f), Vector3.one * 0.16f);
+                        Ball(r, H("#FF6B8A"), new Vector3(-0.02f, 0.28f, -0.31f), Vector3.one * 0.07f);
+                    }
+                    break;
+
                 case ModelId.Shield:
                     {
                         // A real shield silhouette: gold rim, red face, white 囍, plus a soft glow and sparkles
@@ -650,7 +667,7 @@ namespace WeddingRun
         static Color black() => H("#1A1620");
 
         /// <summary>A simple wedding guest / night-market visitor. Returns the arm nodes for waving.</summary>
-        public class Person { public Transform root, body, armL, armR, legL, legR; }
+        public class Person { public Transform root, body, armL, armR, legL, legR; public bool elder; }
 
         public static Transform BuildGuest(Transform parent, int seed, out Transform armL, out Transform armR)
         {
@@ -660,48 +677,89 @@ namespace WeddingRun
         }
 
         /// <summary>A simple townsperson with swingable legs and arms (optionally carrying a shopping bag).</summary>
-        public static Person BuildPerson(Transform parent, int seed, bool withBag)
+        static Mesh elderRing, elderHook;
+        const float StoopAngle = 8f;
+        /// <summary>How far forward an elder holds the arm with the walking stick.</summary>
+        public const float CaneArmAngle = 22f;
+
+        /// <param name="elder">Kinmen villagers: white hair, a slight stoop, a walking stick, some in straw hats.</param>
+        public static Person BuildPerson(Transform parent, int seed, bool withBag, bool elder = false)
         {
-            var pr = new Person();
+            var pr = new Person { elder = elder };
             var rnd = new System.Random(seed);
             Color Pick(params string[] hex) => H(hex[rnd.Next(hex.Length)]);
             bool woman = rnd.NextDouble() < 0.5;
-            float s = 0.82f + (float)rnd.NextDouble() * 0.12f;
+            float s = (elder ? 1.05f : 0.82f) + (float)rnd.NextDouble() * (elder ? 0.1f : 0.12f);
             var root = Node(parent, "Guest", Vector3.zero);
             var body = Node(root, "Body", Vector3.zero);
             body.localScale = Vector3.one * s;
             Color skin = Pick("#FFDCC2", "#F5C9A8", "#E8B48E", "#FFE4D0");
             Color hair = Pick("#2A1E1A", "#3A2622", "#1A1620", "#5A3A28", "#8A6A4A");
-            Color cloth = woman ? Pick("#F7A8C4", "#9ED9C3", "#C3B1E1", "#FFE3A3", "#8FC8F0", "#FFB38A")
+            if (elder) { hair = Pick("#F2F0EC", "#E0DED8", "#C9C7C2", "#B0AEAA"); skin = Pick("#E8C4A0", "#DDB48E", "#D2A67E"); }
+            Color cloth = elder ? (woman ? Pick("#7A5A78", "#5E7A8A", "#8A5A5A", "#6A7A5A", "#A07A9A") : Pick("#6A6A70", "#7A6A58", "#4E5E6E", "#8A8678"))
+                        : woman ? Pick("#F7A8C4", "#9ED9C3", "#C3B1E1", "#FFE3A3", "#8FC8F0", "#FFB38A")
                                 : Pick("#3A4A6E", "#5A5A66", "#6E4A3A", "#2E5E4E", "#7A6A9A");
             // legs (pivot at the hip so they can swing when walking)
             pr.legL = Node(body, "LegL", new Vector3(0, 0.62f, -0.1f));
             pr.legR = Node(body, "LegR", new Vector3(0, 0.62f, 0.1f));
             foreach (var leg in new[] { pr.legL, pr.legR })
             {
-                Part(leg, MeshKit.Capsule, woman ? skin : H("#2E2E3A"), new Vector3(0, -0.29f, 0), new Vector3(0.16f, 0.3f, 0.16f));
+                Part(leg, MeshKit.Capsule, elder ? H("#4A4650") : woman ? skin : H("#2E2E3A"), new Vector3(0, -0.29f, 0), new Vector3(0.16f, 0.3f, 0.16f));
                 Box(leg, H("#2A2230"), new Vector3(0.04f, -0.58f, 0), new Vector3(0.22f, 0.08f, 0.13f));
             }
-            if (woman) Frus(body, cloth, new Vector3(0, 0.45f, 0), 0.38f, 0.2f, 0.62f, default, 12);
-            else Box(body, cloth, new Vector3(0, 0.92f, 0), new Vector3(0.38f, 0.56f, 0.44f));
-            if (woman) Frus(body, cloth, new Vector3(0, 1.0f, 0), 0.2f, 0.22f, 0.36f, default, 12);
+            // elders stoop from the hips: the legs stay straight, everything above leans forward
+            var upper = body;
+            if (elder) upper = Node(Node(body, "Waist", new Vector3(0, 0.62f, 0), new Vector3(0, 0, -StoopAngle)), "Upper", new Vector3(0, -0.62f, 0));
+            if (woman && !elder) Frus(body, cloth, new Vector3(0, 0.45f, 0), 0.38f, 0.2f, 0.62f, default, 12);
+            else Box(upper, cloth, new Vector3(0, 0.92f, 0), new Vector3(0.38f, 0.56f, 0.44f));
+            if (elder)
+            {
+                Cyl(upper, skin, new Vector3(0, 1.27f, 0), 0.09f, 0.18f);   // neck
+                for (int b = 0; b < 3; b++) Ball(upper, Color.Lerp(cloth, Color.white, 0.6f), new Vector3(0.195f, 1.08f - b * 0.15f, 0), Vector3.one * 0.05f);
+            }
+            else if (woman) Frus(body, cloth, new Vector3(0, 1.0f, 0), 0.2f, 0.22f, 0.36f, default, 12);
             else { Box(body, Color.white, new Vector3(0.19f, 1.0f, 0), new Vector3(0.02f, 0.3f, 0.14f)); Box(body, Pick("#D7263D", "#2A2230", "#E4577E"), new Vector3(0.2f, 1.0f, 0), new Vector3(0.025f, 0.26f, 0.05f)); }
-            var armL = Node(body, "ArmL", new Vector3(0, 1.28f, -0.26f));
-            var armR = Node(body, "ArmR", new Vector3(0, 1.28f, 0.26f));
+            var armL = Node(upper, "ArmL", new Vector3(0, 1.28f, -0.26f));
+            var armR = Node(upper, "ArmR", new Vector3(0, 1.28f, 0.26f));
             foreach (var arm in new[] { armL, armR })
             {
-                Part(arm, MeshKit.Capsule, woman ? skin : cloth, new Vector3(0, -0.22f, 0), new Vector3(0.13f, 0.23f, 0.13f));
+                Part(arm, MeshKit.Capsule, woman && !elder ? skin : cloth, new Vector3(0, -0.22f, 0), new Vector3(0.13f, 0.23f, 0.13f));
                 Ball(arm, skin, new Vector3(0, -0.45f, 0), Vector3.one * 0.12f);
             }
             float hr = 0.27f;
-            var head = Node(body, "Head", new Vector3(0, 1.35f, 0));
+            var head = Node(upper, "Head", new Vector3(0, 1.35f, 0));
             Ball(head, skin, new Vector3(0, hr, 0), Vector3.one * hr * 2);
             Ball(head, H("#2A1E28"), new Vector3(hr * 0.86f, hr + 0.02f, -hr * 0.34f), new Vector3(0.06f, 0.08f, 0.06f), default, true);
             Ball(head, H("#2A1E28"), new Vector3(hr * 0.9f, hr + 0.02f, hr * 0.18f), new Vector3(0.05f, 0.07f, 0.05f), default, true);
             Ball(head, H("#FF9AAE"), new Vector3(hr * 0.72f, hr - 0.08f, -hr * 0.62f), new Vector3(0.08f, 0.04f, 0.05f), default, true);
-            Ball(head, hair, new Vector3(-0.04f, hr + 0.1f, 0), new Vector3(0.58f, 0.4f, 0.58f));
-            if (woman) Ball(head, hair, new Vector3(-0.13f, hr - 0.12f, 0), new Vector3(0.4f, 0.62f, 0.54f));
-            if (withBag && rnd.NextDouble() < 0.6)
+            if (elder)
+            {
+                Ball(head, hair, new Vector3(-0.04f, hr + 0.1f, 0), new Vector3(0.58f, 0.4f, 0.58f));
+                if (woman) Ball(head, hair, new Vector3(-0.3f, hr + 0.12f, 0), Vector3.one * 0.2f);                                     // bun
+                if (rnd.NextDouble() < 0.4)
+                {
+                    // Kinmen straw hat
+                    Frus(head, H("#D9BE7A"), new Vector3(0, hr + 0.2f, 0), 0.5f, 0.04f, 0.22f, default, 14);
+                    Part(head, MeshKit.Cylinder, H("#B8964E"), new Vector3(0, hr + 0.21f, 0), new Vector3(0.5f, 0.012f, 0.5f));
+                }
+                else if (rnd.NextDouble() < 0.5)
+                {
+                    if (elderRing == null) elderRing = MeshKit.Torus(0.06f, 0.012f, 12, 4);
+                    foreach (float z in new[] { -hr * 0.34f, hr * 0.18f })
+                        Part(head, elderRing, H("#3A3030"), new Vector3(hr * 0.96f, hr + 0.02f, z), Vector3.one, new Vector3(0, 90, 0), true);
+                }
+                // walking stick: held in the hand of the forward arm, kept upright with its tip on the ground
+                var cane = Node(armL, "Cane", new Vector3(0, -0.45f, 0), new Vector3(0, 0, StoopAngle - CaneArmAngle));
+                Cyl(cane, H("#7A5230"), new Vector3(0, -0.41f, 0), 0.024f, 0.86f);
+                if (elderHook == null) elderHook = MeshKit.Torus(0.06f, 0.024f, 10, 5, 180f);
+                Part(cane, elderHook, H("#7A5230"), new Vector3(0.06f, 0.02f, 0), Vector3.one);
+            }
+            else
+            {
+                Ball(head, hair, new Vector3(-0.04f, hr + 0.1f, 0), new Vector3(0.58f, 0.4f, 0.58f));
+                if (woman) Ball(head, hair, new Vector3(-0.13f, hr - 0.12f, 0), new Vector3(0.4f, 0.62f, 0.54f));
+            }
+            if (withBag && !elder && rnd.NextDouble() < 0.6)
             {
                 var bag = Node(armR, "Bag", new Vector3(0, -0.6f, 0));
                 Box(bag, Pick("#E4577E", "#F2C14E", "#8FC8F0", "#FFFFFF", "#9ED9C3"), new Vector3(0, -0.12f, 0), new Vector3(0.34f, 0.3f, 0.14f));
@@ -741,9 +799,9 @@ namespace WeddingRun
             }
             else
             {
-                // pleated mini skirt + cardigan
-                dressTop = H("#FFE08A");
-                Frus(rig.skirt, H("#8FD3C2"), new Vector3(0, -0.4f, 0), 0.38f, 0.21f, 0.42f, default, 10);
+                // yellow pleated mini skirt + pink cardigan
+                dressTop = H("#FF9EC4");
+                Frus(rig.skirt, H("#FFD84D"), new Vector3(0, -0.4f, 0), 0.38f, 0.21f, 0.42f, default, 10);
             }
 
             var torso = Node(rig.body, "Torso", new Vector3(0, 0.84f, 0));

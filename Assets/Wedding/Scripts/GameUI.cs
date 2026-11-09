@@ -237,7 +237,7 @@ namespace WeddingRun
             Label(shieldPill, T("囍 護盾發動中", "囍 Shield ON", "囍 シールド中"), 30, Palette.Gold);
             shieldPill.gameObject.SetActive(false);
 
-            // journey progress 香港 → 金門 → 台北 → 名古屋 → 囍
+            // journey progress 香港 → 台北 → 金門 → 名古屋 → (名古屋港 once reached) → 囍
             var bar = Card(hud, "Journey", new Vector2(0.5f, 1), new Vector2(0, -84), new Vector2(900, 116), new Color(1, 1, 1, 0.9f), Round32, 0.15f);
             var track = Rect(bar, "Track", new Vector2(0.5f, 0.5f), new Vector2(0, 14), new Vector2(760, 14));
             Img(track, Pill, H("#F3D9E2"));
@@ -245,11 +245,12 @@ namespace WeddingRun
             Img(progressFill, Pill, Palette.Rose);
             for (int i = 0; i < Stages.List.Length; i++)
             {
-                float x = -380 + i * 190;
+                float x = -380 + i * 760f / (Stages.List.Length - 1);
                 var node = Rect(bar, "Node" + i, new Vector2(0.5f, 0.5f), new Vector2(x, 14), new Vector2(40, 40));
                 progressNodes.Add(Img(node, Circle, H("#F3D9E2")));
                 nodeLabels.Add(Label(bar, Stages.List[i].ShortName, 26, Palette.Wine, new Vector2(0.5f, 0.5f), new Vector2(x, -30), new Vector2(180, 40)));
             }
+            LayoutNodes(false);
             progressMarker = Rect(bar, "Marker", new Vector2(0.5f, 0.5f), new Vector2(-380, 14), new Vector2(56, 56));
             Img(progressMarker, Circle, Palette.Gold);
             var inner = Rect(progressMarker, "In", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(44, 44));
@@ -345,17 +346,47 @@ namespace WeddingRun
             var last = nodeLabels[nodeLabels.Count - 1];
             string lastText = showLap ? T("再一輪", "Loop", "ループ") : Stages.List[Stages.List.Length - 1].ShortName;
             if (last.text != lastText) last.text = lastText;
-            progressFill.sizeDelta = new Vector2(760 * Mathf.Clamp01(t), 14);
-            float x = -380 + 760 * Mathf.Clamp01(t);
+            bool showPort = !showLap && stage >= Stages.PortStage;
+            if (showPort != nodesShowPort) LayoutNodes(showPort);
+            float k = t < 0.01f ? 1f : 1f - Mathf.Exp(-10f * Time.unscaledDeltaTime);   // a new run snaps, the port reveal slides
+            shownProgress = Mathf.Lerp(shownProgress, Mathf.Clamp01(t), k);
+            for (int i = 0; i < nodeTargets.Length; i++)
+            {
+                float nx = Mathf.Lerp(progressNodes[i].rectTransform.anchoredPosition.x, nodeTargets[i], k);
+                progressNodes[i].rectTransform.anchoredPosition = new Vector2(nx, 14);
+                nodeLabels[i].rectTransform.anchoredPosition = new Vector2(nx, -30);
+            }
+            progressFill.sizeDelta = new Vector2(760 * shownProgress, 14);
+            float x = -380 + 760 * shownProgress;
             progressMarker.anchoredPosition = new Vector2(x, 14 + Mathf.Abs(Mathf.Sin(Time.time * 6f)) * 6f);
             for (int i = 0; i < progressNodes.Count; i++) progressNodes[i].color = i <= stage ? Palette.Rose : H("#F3D9E2");
+        }
+
+        bool nodesShowPort;
+        float[] nodeTargets;
+        float shownProgress;
+
+        /// <summary>The port node stays hidden (first lap until arrival, and every later lap); the others share the bar evenly.</summary>
+        void LayoutNodes(bool showPort)
+        {
+            nodesShowPort = showPort;
+            int n = progressNodes.Count, port = Stages.PortStage, gaps = showPort ? n - 1 : n - 2;
+            if (nodeTargets == null) nodeTargets = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                bool visible = showPort || i != port;
+                progressNodes[i].gameObject.SetActive(visible);
+                nodeLabels[i].gameObject.SetActive(visible);
+                int slot = !showPort && i > port ? i - 1 : i;
+                nodeTargets[i] = -380 + slot * 760f / gaps;
+            }
         }
 
         // ------------------------------------------------------------------ transient feedback
 
         public void StageBanner(StageDef s, int lap)
         {
-            bannerTitle.text = Loc.Current == Lang.En ? $"STAGE {s.index + 1} · {s.nameEn}" : $"STAGE {s.index + 1} · {s.Name}  {s.nameEn}";
+            bannerTitle.text = Loc.Current == Lang.En ? $"STAGE {s.index + 1} · {s.nameEn}" : s.index == Stages.PortStage ? $"STAGE {s.index + 1} · {s.Name}" : $"STAGE {s.index + 1} · {s.Name}  {s.nameEn}";
             bannerSub.text = lap > 0 ? T($"第 {lap + 1} 輪　越跑越快！", $"Lap {lap + 1} — faster and faster!", $"{lap + 1}周目　どんどん速くなる！") : "";
             bannerTitle.rectTransform.anchoredPosition = new Vector2(0, lap > 0 ? 26 : 0);
             bannerCard.gameObject.SetActive(true);
@@ -542,7 +573,7 @@ namespace WeddingRun
             goStats[3].text = r.maxCombo.ToString();
             var s = Stages.List[r.stage];
             string lapStr = r.lap > 0 ? T($"第 {r.lap + 1} 輪 · ", $"Lap {r.lap + 1} · ", $"{r.lap + 1}周目 · ") : "";
-            goStage.text = T($"到達：{lapStr}{s.Name} {s.nameEn}", $"Reached: {lapStr}{s.nameEn}", $"到達：{lapStr}{s.Name}");
+            goStage.text = T(s.index == Stages.PortStage ? $"到達：{lapStr}{s.Name}" : $"到達：{lapStr}{s.Name} {s.nameEn}", $"Reached: {lapStr}{s.nameEn}", $"到達：{lapStr}{s.Name}");
             goRecord.gameObject.SetActive(r.newRecord);
             goSubmitRow.gameObject.SetActive(OnlineRanking.Available);
             goWeb.gameObject.SetActive(Platform.IsWebGL);
@@ -606,7 +637,7 @@ namespace WeddingRun
             Label(card, T("跳躍：點擊畫面 / 空白鍵 / ↑（按住更高・空中再點一次＝二段跳）　·　滑行：往下滑 / ↓（空中＝急降）\n香港 → 台北 → 金門 → 名古屋 → 婚禮會場，之後四個城市無限循環、越跑越快！", "Jump: tap / Space / ↑ (hold = higher, tap again in the air = double jump)  ·  Slide: swipe down / ↓ (in the air = drop)\nHong Kong → Taipei → Kinmen → Nagoya → Wedding, then the 4 cities loop forever, faster and faster!", "ジャンプ：タップ / スペース / ↑（長押しで高く・空中でもう一度＝2段ジャンプ）　·　スライド：下スワイプ / ↓（空中＝急降下）\n香港 → 台北 → 金門 → 名古屋 → 結婚式場、そのあとは4都市を無限ループ、どんどん速くなる！"), 32, Palette.Ink,
                 new Vector2(0.5f, 1), new Vector2(0, -165), new Vector2(1400, 100), TextAlignmentOptions.Center, false);
 
-            ModelId[] good = { ModelId.Heart, ModelId.Ring, ModelId.RedPacket, ModelId.PineappleBun, ModelId.GongCandy, ModelId.BubbleTea, ModelId.EbiFry, ModelId.MisoKatsu, ModelId.WeddingCookie, ModelId.Shield };
+            ModelId[] good = { ModelId.Heart, ModelId.Ring, ModelId.RedPacket, ModelId.PineappleBun, ModelId.BubbleTea, ModelId.GongCandy, ModelId.EbiFry, ModelId.MisoKatsu, ModelId.Rose, ModelId.WeddingCookie, ModelId.Shield };
             ModelId[] bad = { ModelId.AlarmClock, ModelId.Briefcase, ModelId.RainCloud };
             ModelId[] obs = { ModelId.Cone, ModelId.GiftStack2, ModelId.LiquorJar, ModelId.Suitcase, ModelId.ChampagneTower, ModelId.OverheadBanner, ModelId.OverheadFirecracker, ModelId.SumoPig };
 
@@ -622,7 +653,7 @@ namespace WeddingRun
         {
             var hdr = Card(card, "Hdr" + header, new Vector2(0.5f, 1), new Vector2(x, -255), new Vector2(440, 60), color, Pill, 0);
             Label(hdr, header, 28, Color.white);
-            float rowH = Mathf.Min(58, 450f / ids.Length);
+            float rowH = Mathf.Min(58, 460f / ids.Length);
             for (int i = 0; i < ids.Length; i++)
             {
                 var def = ItemDef.Get(ids[i]);

@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
     <title>{{{ PRODUCT_NAME }}}</title>
     <style>
-      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #2a1e3f; }
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: none;
+                   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; background: #2a1e3f; }
       #unity-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: #2a1e3f; touch-action: none; }
       #loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
                  font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; color: #fff; background: linear-gradient(#3b2a5c, #c75b84); }
@@ -22,6 +23,9 @@
     <div id="loading"><div class="xi">囍</div><div id="bar"><div id="bar-fill"></div></div><div id="pct">Loading… 0%</div></div>
     <div id="error"></div>
     <script>
+      // Swipes belong to the game: never let the browser scroll / rubber-band the page.
+      document.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
+
       var unityInstance = null;
       var pendingBgm = null;   // "start" / "stop" requested by the parent page before Unity finished loading
 
