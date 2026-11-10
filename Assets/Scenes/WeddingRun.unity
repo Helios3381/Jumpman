@@ -123,7 +123,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &33779157
+--- !u!1 &372886337
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -131,69 +131,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 33779159}
-  - component: {fileID: 33779158}
-  m_Layer: 0
-  m_Name: WeddingGame
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &33779158
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 33779157}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c06f6076a6dfc48639f62b65e7118706, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  groomName: "\u51F1\u9298"
-  brideName: "\u8A60\u8431"
-  weddingDate: 2027.01.01
-  litMaterial: {fileID: 2100000, guid: cef8b25e22794482f9f4c7e0413fbef2, type: 2}
-  unlitMaterial: {fileID: 2100000, guid: 52f84790460384c77a1867de8920275a, type: 2}
-  vertexColorMaterial: {fileID: 2100000, guid: 68ca25842390f4625a2794c1ce7b4b69, type: 2}
-  fadeMaterial: {fileID: 2100000, guid: f2ae165b2d48b486fa2842809f9e19f9, type: 2}
-  fontBold: {fileID: 11400000, guid: 7800fae058e174d2b878de4a4206664b, type: 2}
-  fontRegular: {fileID: 11400000, guid: 7800fae058e174d2b878de4a4206664b, type: 2}
-  fontJapanese: {fileID: 11400000, guid: d877c653244f948dbb2f5f3c0d6f1c03, type: 2}
-  music: {fileID: 8300000, guid: 25cab2cb038393d499c2ef12d6c5fe30, type: 3}
-  gameOverMusic: {fileID: 8300000, guid: 1637b1160c441e94cb35580a7a9936c8, type: 3}
-  jumpSound: {fileID: 8300000, guid: 08ab7053d586c458db3774d33c141a4b, type: 3}
-  crashSound: {fileID: 8300000, guid: 4bcde6de2166e41e284ec46d8a01fb90, type: 3}
-  leaderboardId: highscores
-  autoPilot: 0
-  debugStartDistance: 0
---- !u!4 &33779159
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 33779157}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &924731725
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 924731727}
-  - component: {fileID: 924731726}
+  - component: {fileID: 372886339}
+  - component: {fileID: 372886338}
   m_Layer: 0
   m_Name: Sun
   m_TagString: Untagged
@@ -201,13 +140,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!108 &924731726
+--- !u!108 &372886338
 Light:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 924731725}
+  m_GameObject: {fileID: 372886337}
   m_Enabled: 1
   serializedVersion: 10
   m_Type: 1
@@ -263,13 +202,13 @@ Light:
   m_UseViewFrustumForShadowCasterCull: 1
   m_ShadowRadius: 0
   m_ShadowAngle: 0
---- !u!4 &924731727
+--- !u!4 &372886339
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 924731725}
+  m_GameObject: {fileID: 372886337}
   serializedVersion: 2
   m_LocalRotation: {x: 0.38791165, y: -0.27470842, z: 0.12230807, w: 0.8712638}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -278,7 +217,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1162249420
+--- !u!1 &593783173
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -286,9 +225,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1162249423}
-  - component: {fileID: 1162249422}
-  - component: {fileID: 1162249421}
+  - component: {fileID: 593783176}
+  - component: {fileID: 593783175}
+  - component: {fileID: 593783174}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -296,21 +235,21 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!81 &1162249421
+--- !u!81 &593783174
 AudioListener:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1162249420}
+  m_GameObject: {fileID: 593783173}
   m_Enabled: 1
---- !u!20 &1162249422
+--- !u!20 &593783175
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1162249420}
+  m_GameObject: {fileID: 593783173}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
@@ -355,13 +294,13 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!4 &1162249423
+--- !u!4 &593783176
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1162249420}
+  m_GameObject: {fileID: 593783173}
   serializedVersion: 2
   m_LocalRotation: {x: 0.05233596, y: 0, z: 0, w: 0.9986295}
   m_LocalPosition: {x: 1.5, y: 5.2, z: -19}
@@ -370,7 +309,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1484967323
+--- !u!1 &932544069
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -378,9 +317,70 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1484967326}
-  - component: {fileID: 1484967325}
-  - component: {fileID: 1484967324}
+  - component: {fileID: 932544071}
+  - component: {fileID: 932544070}
+  m_Layer: 0
+  m_Name: WeddingGame
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &932544070
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 932544069}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c06f6076a6dfc48639f62b65e7118706, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  groomName: "\u51F1\u9298"
+  brideName: "\u8A60\u8431"
+  weddingDate: 2027.01.01
+  litMaterial: {fileID: 2100000, guid: cef8b25e22794482f9f4c7e0413fbef2, type: 2}
+  unlitMaterial: {fileID: 2100000, guid: 52f84790460384c77a1867de8920275a, type: 2}
+  vertexColorMaterial: {fileID: 2100000, guid: 68ca25842390f4625a2794c1ce7b4b69, type: 2}
+  fadeMaterial: {fileID: 2100000, guid: f2ae165b2d48b486fa2842809f9e19f9, type: 2}
+  fontBold: {fileID: 11400000, guid: 7800fae058e174d2b878de4a4206664b, type: 2}
+  fontRegular: {fileID: 11400000, guid: 7800fae058e174d2b878de4a4206664b, type: 2}
+  fontJapanese: {fileID: 11400000, guid: d877c653244f948dbb2f5f3c0d6f1c03, type: 2}
+  music: {fileID: 8300000, guid: 25cab2cb038393d499c2ef12d6c5fe30, type: 3}
+  gameOverMusic: {fileID: 8300000, guid: 1637b1160c441e94cb35580a7a9936c8, type: 3}
+  jumpSound: {fileID: 8300000, guid: 08ab7053d586c458db3774d33c141a4b, type: 3}
+  crashSound: {fileID: 8300000, guid: 4bcde6de2166e41e284ec46d8a01fb90, type: 3}
+  leaderboardId: highscores
+  autoPilot: 0
+  debugStartDistance: 0
+--- !u!4 &932544071
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 932544069}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2009930918
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2009930921}
+  - component: {fileID: 2009930920}
+  - component: {fileID: 2009930919}
   m_Layer: 0
   m_Name: EventSystem
   m_TagString: Untagged
@@ -388,13 +388,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1484967324
+--- !u!114 &2009930919
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1484967323}
+  m_GameObject: {fileID: 2009930918}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4f231c4fb786f3946a6b90b886c48677, type: 3}
@@ -408,13 +408,13 @@ MonoBehaviour:
   m_InputActionsPerSecond: 10
   m_RepeatDelay: 0.5
   m_ForceModuleActive: 0
---- !u!114 &1484967325
+--- !u!114 &2009930920
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1484967323}
+  m_GameObject: {fileID: 2009930918}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 76c392e42b5098c458856cdf6ecaaaa1, type: 3}
@@ -423,13 +423,13 @@ MonoBehaviour:
   m_FirstSelected: {fileID: 0}
   m_sendNavigationEvents: 1
   m_DragThreshold: 10
---- !u!4 &1484967326
+--- !u!4 &2009930921
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1484967323}
+  m_GameObject: {fileID: 2009930918}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -442,7 +442,7 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1162249423}
-  - {fileID: 924731727}
-  - {fileID: 1484967326}
-  - {fileID: 33779159}
+  - {fileID: 593783176}
+  - {fileID: 372886339}
+  - {fileID: 2009930921}
+  - {fileID: 932544071}

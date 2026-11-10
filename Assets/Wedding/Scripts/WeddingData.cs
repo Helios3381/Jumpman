@@ -135,7 +135,7 @@ namespace WeddingRun
         public static readonly StageDef[] List =
         {
             new StageDef {
-                index = 0, theme = 0, shortName = "香港", nameZh = "香港", nameEn = "HONG KONG", nameJa = "香港", shortEn = "Hong Kong", shortJa = "香港", length = 600,
+                index = 0, theme = 0, shortName = "香港", nameZh = "香港", nameEn = "HONG KONG", nameJa = "香港", shortEn = "Hong Kong", shortJa = "香港", length = 420,
                 foods = new[] { ModelId.PineappleBun }, overhead = ModelId.OverheadSign,
                 obstacles = new[] { ModelId.Cone, ModelId.Barrier, ModelId.GiftStack1, ModelId.GiftStack2, ModelId.GiftStack3 },
                 skyTop = C("#241C5C"), skyBottom = C("#F08AA6"), fog = C("#8F6FA8"), farGround = C("#2B3E6E"), midGround = C("#5B5373"),
@@ -144,7 +144,7 @@ namespace WeddingRun
                 petalA = C("#FFD86B"), petalB = C("#FF8FB1"),
             },
             new StageDef {
-                index = 1, theme = 2, shortName = "台北", nameZh = "台北", nameEn = "TAIPEI", nameJa = "台北", shortEn = "Taipei", shortJa = "台北", length = 700, brideJoins = true,
+                index = 1, theme = 2, shortName = "台北", nameZh = "台北", nameEn = "TAIPEI", nameJa = "台北", shortEn = "Taipei", shortJa = "台北", length = 490, brideJoins = true,
                 foods = new[] { ModelId.BubbleTea }, overhead = ModelId.OverheadBanner,
                 obstacles = new[] { ModelId.Scooter, ModelId.Cone, ModelId.GiftStack1, ModelId.GiftStack2, ModelId.GiftStack3, ModelId.Barrier },
                 // night market at night
@@ -154,7 +154,7 @@ namespace WeddingRun
                 petalA = C("#FFB347"), petalB = C("#FF6B6B"),
             },
             new StageDef {
-                index = 2, theme = 1, shortName = "金門", nameZh = "金門", nameEn = "KINMEN", nameJa = "金門", shortEn = "Kinmen", shortJa = "金門", length = 800,
+                index = 2, theme = 1, shortName = "金門", nameZh = "金門", nameEn = "KINMEN", nameJa = "金門", shortEn = "Kinmen", shortJa = "金門", length = 560,
                 foods = new[] { ModelId.GongCandy }, overhead = ModelId.OverheadFirecracker,
                 obstacles = new[] { ModelId.LiquorJar, ModelId.BrickWall, ModelId.Cone, ModelId.GiftStack2, ModelId.GiftStack3 },
                 skyTop = C("#3E8EDB"), skyBottom = C("#D8F1FF"), fog = C("#BFE0F2"), farGround = C("#2E9BB0"), midGround = C("#E3CDA2"),
@@ -163,7 +163,7 @@ namespace WeddingRun
                 petalA = C("#FFFFFF"), petalB = C("#FFE08A"),
             },
             new StageDef {
-                index = 3, theme = 3, shortName = "名古屋", nameZh = "名古屋", nameEn = "NAGOYA", nameJa = "名古屋", shortEn = "Nagoya", shortJa = "名古屋", length = 600,
+                index = 3, theme = 3, shortName = "名古屋", nameZh = "名古屋", nameEn = "NAGOYA", nameJa = "名古屋", shortEn = "Nagoya", shortJa = "名古屋", length = 420,
                 foods = new[] { ModelId.EbiFry, ModelId.MisoKatsu }, overhead = ModelId.OverheadNoren,
                 obstacles = new[] { ModelId.Suitcase, ModelId.Cone, ModelId.Barrier, ModelId.GiftStack1, ModelId.GiftStack2, ModelId.GiftStack3 },
                 skyTop = C("#7EC0EE"), skyBottom = C("#FFE3EC"), fog = C("#F3D7E3"), farGround = C("#7DB88A"), midGround = C("#B9DB9F"),
@@ -173,7 +173,7 @@ namespace WeddingRun
             },
             new StageDef {
                 // Garden Pier at night, where he proposed. First lap only: later laps loop the 4 cities before it.
-                index = 4, theme = 5, shortName = "名古屋港", nameZh = "名古屋港", nameEn = "Port of Nagoya", nameJa = "名古屋港", shortEn = "Port of Nagoya", shortJa = "名古屋港", length = 450,
+                index = 4, theme = 5, shortName = "名古屋港", nameZh = "名古屋港", nameEn = "Port of Nagoya", nameJa = "名古屋港", shortEn = "Port of Nagoya", shortJa = "名古屋港", length = 315,
                 foods = new[] { ModelId.Rose }, overhead = ModelId.OverheadNoren,
                 obstacles = new[] { ModelId.Suitcase, ModelId.Cone, ModelId.Barrier, ModelId.GiftStack1, ModelId.GiftStack2, ModelId.GiftStack3 },
                 skyTop = C("#0B0E2E"), skyBottom = C("#33295E"), fog = C("#262148"), farGround = C("#1A3360"), midGround = C("#4A4558"),
@@ -182,7 +182,7 @@ namespace WeddingRun
                 petalA = C("#FFE6A8"), petalB = C("#FFB0C8"),
             },
             new StageDef {
-                index = 5, theme = 4, shortName = "婚禮", nameZh = "婚禮會場", nameEn = "WEDDING", nameJa = "結婚式場", shortEn = "Wedding", shortJa = "結婚式", length = 1000,
+                index = 5, theme = 4, shortName = "婚禮", nameZh = "婚禮會場", nameEn = "WEDDING", nameJa = "結婚式場", shortEn = "Wedding", shortJa = "結婚式", length = 700,
                 foods = new[] { ModelId.WeddingCookie }, overhead = ModelId.OverheadGarland,
                 obstacles = new[] { ModelId.GiftStack1, ModelId.GiftStack2, ModelId.ChampagneTower, ModelId.Suitcase, ModelId.GiftStack3 },
                 skyTop = C("#2A1E55"), skyBottom = C("#FF9DB0"), fog = C("#C98AB0"), farGround = C("#5E9A6E"), midGround = C("#8CC08A"),

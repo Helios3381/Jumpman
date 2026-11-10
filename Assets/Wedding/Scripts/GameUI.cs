@@ -166,9 +166,12 @@ namespace WeddingRun
 
             var start = Btn(title, T("開始遊戲  START", "START", "スタート"), new Vector2(0.5f, 0), new Vector2(0, 262), new Vector2(620, 130), Style.Primary, game.StartRun, 54);
             UIKit.Run(Breathe(start.transform.Find("Bg")));
-            Btn(title, T("玩法說明", "How to Play", "遊び方"), new Vector2(0.5f, 0), new Vector2(OnlineRanking.Available ? -170 : 0, 124), new Vector2(310, 96), Style.Secondary, OpenHowTo, 38);
+            bool web = Platform.InWebsite;
+            Btn(title, T("玩法說明", "How to Play", "遊び方"), new Vector2(0.5f, 0), new Vector2(OnlineRanking.Available || web ? -170 : 0, 124), new Vector2(310, 96), Style.Secondary, OpenHowTo, 38);
             if (OnlineRanking.Available)
                 Btn(title, T("排行榜", "Ranking", "ランキング"), new Vector2(0.5f, 0), new Vector2(170, 124), new Vector2(310, 96), Style.Gold, OpenRanking, 38);
+            else if (web)
+                Btn(title, T("返回網頁", "Back to Website", "サイトに戻る"), new Vector2(0.5f, 0), new Vector2(170, 124), new Vector2(310, 96), Style.Secondary, Platform.ExitToWebsite, 34);
 
             Label(title, T("點擊畫面 / 空白鍵：跳躍（按住更高、空中再點一次＝二段跳）　·　往下滑 / ↓：滑行", "Tap / Space: Jump (hold = higher, tap again in the air = double jump)  ·  Swipe down / ↓: Slide", "タップ / スペース：ジャンプ（長押しで高く・空中でもう一度＝2段ジャンプ）　·　下スワイプ / ↓：スライド"), 30, new Color(1, 1, 1, 0.9f), new Vector2(0.5f, 0), new Vector2(0, 62), new Vector2(1800, 50), TextAlignmentOptions.Center, false);
             var copyright = Label(title, "©2026 Helios Studios All rights reserved.", 22, new Color(1, 1, 1, 0.78f), new Vector2(1, 0), new Vector2(-374, 22), new Vector2(700, 30), TextAlignmentOptions.BottomRight, false);
@@ -476,11 +479,13 @@ namespace WeddingRun
         {
             pause = Stretch(root, "Pause");
             Img(Stretch(pause, "Dim"), White, new Color(0.15f, 0.04f, 0.12f, 0.55f));
-            var card = Card(pause, "Card", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(720, 680), Palette.Cream);
+            bool web = Platform.InWebsite;   // inside the wedding page the way back lives here (the page's own button would cover the score)
+            var card = Card(pause, "Card", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(720, web ? 800 : 680), Palette.Cream);
             Label(card, T("暫停中", "Paused", "一時停止"), 72, Palette.Wine, new Vector2(0.5f, 1), new Vector2(0, -90), new Vector2(600, 100));
             Btn(card, T("繼續遊戲", "Resume", "つづける"), new Vector2(0.5f, 1), new Vector2(0, -230), new Vector2(480, 110), Style.Primary, game.Resume, 44);
             Btn(card, T("重新開始", "Restart", "やり直す"), new Vector2(0.5f, 1), new Vector2(0, -360), new Vector2(480, 100), Style.Secondary, game.Restart, 40);
             Btn(card, T("回主畫面", "Home", "タイトルへ"), new Vector2(0.5f, 1), new Vector2(0, -480), new Vector2(480, 100), Style.Secondary, game.GoHome, 40);
+            if (web) Btn(card, T("返回網頁", "Back to Website", "サイトに戻る"), new Vector2(0.5f, 1), new Vector2(0, -600), new Vector2(480, 100), Style.Secondary, Platform.ExitToWebsite, 40);
             LangButton(card, new Vector2(0.5f, 0), new Vector2(-220, 70), new Vector2(200, 80), Style.Gold);
             musicBtn2 = Btn(card, "音樂 ON", new Vector2(0.5f, 0), new Vector2(0, 70), new Vector2(200, 80), Style.Gold, () => { game.ToggleMusic(); RefreshSoundButtons(); }, 32);
             sfxBtn2 = Btn(card, "音效 ON", new Vector2(0.5f, 0), new Vector2(220, 70), new Vector2(200, 80), Style.Gold, () => { game.ToggleSfx(); RefreshSoundButtons(); }, 32);
@@ -527,8 +532,17 @@ namespace WeddingRun
             submitBtn = Btn(goSubmitRow, T("上傳成績", "Submit", "スコア送信"), new Vector2(0.5f, 0.5f), new Vector2(285, 0), new Vector2(300, 90), Style.Gold, OnSubmit, 36);
             goWeb = Label(card, T("成績已送出！", "Score sent!", "スコアを送信しました！"), 34, Palette.Good, new Vector2(0.5f, 1), new Vector2(0, -665), new Vector2(900, 60));
 
-            Btn(card, T("再玩一次", "Play Again", "もう一度"), new Vector2(0.5f, 0), new Vector2(-150, 80), new Vector2(380, 116), Style.Primary, game.Restart, 46);
-            Btn(card, T("主畫面", "Home", "タイトルへ"), new Vector2(0.5f, 0), new Vector2(190, 80), new Vector2(260, 116), Style.Secondary, game.GoHome, 42);
+            if (Platform.InWebsite)
+            {
+                Btn(card, T("再玩一次", "Play Again", "もう一度"), new Vector2(0.5f, 0), new Vector2(-270, 80), new Vector2(340, 116), Style.Primary, game.Restart, 44);
+                Btn(card, T("主畫面", "Home", "タイトルへ"), new Vector2(0.5f, 0), new Vector2(60, 80), new Vector2(240, 116), Style.Secondary, game.GoHome, 40);
+                Btn(card, T("返回網頁", "Back to Website", "サイトに戻る"), new Vector2(0.5f, 0), new Vector2(340, 80), new Vector2(280, 116), Style.Secondary, Platform.ExitToWebsite, 34);
+            }
+            else
+            {
+                Btn(card, T("再玩一次", "Play Again", "もう一度"), new Vector2(0.5f, 0), new Vector2(-150, 80), new Vector2(380, 116), Style.Primary, game.Restart, 46);
+                Btn(card, T("主畫面", "Home", "タイトルへ"), new Vector2(0.5f, 0), new Vector2(190, 80), new Vector2(260, 116), Style.Secondary, game.GoHome, 42);
+            }
         }
 
         TMP_InputField InputField(Transform parent, Vector2 pos, Vector2 size, string placeholder)
