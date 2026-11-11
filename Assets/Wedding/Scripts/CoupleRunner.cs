@@ -46,7 +46,8 @@ namespace WeddingRun
 
         float proposeTimer;
         bool accepted;
-        Transform ringBox;
+        Transform ringBox, ringGem;
+        Transform[] ringGlints;
 
         /// <summary>Proposal at the Port of Nagoya: he kneels with a ring, she says yes, they hug.</summary>
         public void BeginPropose()
@@ -153,8 +154,23 @@ namespace WeddingRun
             ModelFactory.Box(ringBox, new Color(0.55f, 0.08f, 0.2f), new Vector3(0, 0, 0), new Vector3(0.24f, 0.16f, 0.22f));
             ModelFactory.Box(ringBox, new Color(0.55f, 0.08f, 0.2f), new Vector3(0.02f, 0.17f, 0.1f), new Vector3(0.24f, 0.04f, 0.22f), new Vector3(-70, 0, 0));
             ModelFactory.Box(ringBox, Color.white, new Vector3(0, 0.085f, 0), new Vector3(0.2f, 0.02f, 0.18f));
-            ModelFactory.Part(ringBox, MeshKit.Torus(0.07f, 0.018f, 16, 5), Palette.Gold, new Vector3(0, 0.15f, 0), Vector3.one, default, false, 0.9f);
-            ModelFactory.Part(ringBox, MeshKit.Diamond(), new Color(0.75f, 0.95f, 1f), new Vector3(0, 0.24f, 0), Vector3.one * 0.07f, default, true);
+            ModelFactory.Part(ringBox, MeshKit.Torus(0.085f, 0.02f, 18, 6), Palette.Gold, new Vector3(0, 0.16f, 0), Vector3.one, default, false, 0.9f);
+            ModelFactory.Box(ringBox, Palette.Gold, new Vector3(0, 0.255f, 0), new Vector3(0.06f, 0.04f, 0.06f));   // the setting
+            // a big diamond that catches the light: bright facets and twinkling star glints
+            ringGem = ModelFactory.Node(ringBox, "Diamond", new Vector3(0, 0.35f, 0));
+            ModelFactory.Part(ringGem, MeshKit.Diamond(), new Color(0.82f, 0.97f, 1f), Vector3.zero, Vector3.one * 0.23f, default, true);
+            ModelFactory.Part(ringGem, MeshKit.Diamond(), Color.white, new Vector3(-0.03f, 0.03f, -0.07f), Vector3.one * 0.1f, default, true);
+            Vector3[] glintAt = { new Vector3(-0.19f, 0.52f, -0.1f), new Vector3(0.17f, 0.47f, -0.1f), new Vector3(0.03f, 0.62f, -0.1f), new Vector3(-0.13f, 0.27f, -0.1f), new Vector3(0.2f, 0.3f, -0.1f), new Vector3(-0.24f, 0.4f, -0.1f) };
+            ringGlints = new Transform[glintAt.Length];
+            for (int i = 0; i < glintAt.Length; i++)
+            {
+                var g = ModelFactory.Node(ringBox, "Glint", glintAt[i]);
+                ModelFactory.Box(g, Color.white, Vector3.zero, new Vector3(0.26f, 0.026f, 0.01f), default, true);
+                ModelFactory.Box(g, Color.white, Vector3.zero, new Vector3(0.026f, 0.26f, 0.01f), default, true);
+                ModelFactory.Box(g, new Color(1f, 0.95f, 0.7f), Vector3.zero, new Vector3(0.09f, 0.016f, 0.01f), new Vector3(0, 0, 45), true);
+                ModelFactory.Box(g, new Color(1f, 0.95f, 0.7f), Vector3.zero, new Vector3(0.016f, 0.09f, 0.01f), new Vector3(0, 0, 45), true);
+                ringGlints[i] = g;
+            }
             ringBox.gameObject.SetActive(false);
             kissHeart = ModelFactory.Part(transform, MeshKit.Heart(0.2f), new Color(1f, 0.3f, 0.45f), Vector3.zero, Vector3.one * 0.25f, default, true);
             kissHeart.gameObject.SetActive(false);
@@ -343,6 +359,17 @@ namespace WeddingRun
                 ringBox.localPosition = new Vector3(-0.62f, 0.99f, -0.18f);
                 ringBox.localRotation = Quaternion.Euler(0, -20, 0);
                 ringBox.localScale = Vector3.one * UIKit.EaseOutBack(pop) * 1.4f;
+                if (showRing)
+                {
+                    float tw = Time.time;
+                    ringGem.localRotation = Quaternion.Euler(0, tw * 70f, 0);
+                    for (int i = 0; i < ringGlints.Length; i++)
+                    {
+                        float k = Mathf.Max(0f, Mathf.Sin(tw * 6.5f + i * 1.9f));
+                        ringGlints[i].localScale = Vector3.one * k * k * 1.3f;
+                        ringGlints[i].localRotation = Quaternion.Euler(0, 0, tw * 80f + i * 25f);
+                    }
+                }
             }
             brideHolder.localPosition = new Vector3(brideX, brideY + tiptoe, brideZ);
             // the groom turns around to face her

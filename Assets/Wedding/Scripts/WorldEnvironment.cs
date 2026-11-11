@@ -271,6 +271,9 @@ namespace WeddingRun
                     if (w.x < -26f) { Destroy(w.p.root.gameObject); walkers.RemoveAt(i); }
                     continue;
                 }
+                if (w.dir > 0 && speed > w.pace)
+                    w.dir = -1f;   // the run started again: turn round instead of drifting backwards
+                w.p.root.localRotation = Quaternion.Slerp(w.p.root.localRotation, Quaternion.Euler(0, w.dir > 0 ? 20f : 160f, 0), dt * 8f);
                 w.x += (w.dir * w.pace - speed) * dt;
                 w.phase += dt * w.pace * 5.5f;
                 float sw = Mathf.Sin(w.phase);
@@ -292,7 +295,9 @@ namespace WeddingRun
         void SpawnWalker(float speed)
         {
             bool elder = stage == KinmenTheme;
-            var w = new Walker { dir = Random.value < 0.5f ? -1f : 1f, pace = elder ? Random.Range(0.8f, 1.1f) : Random.Range(1.1f, 1.7f), phase = Random.value * 6f };
+            // While the world scrolls, someone walking the same way as the couple drifts backwards on screen and looks
+            // like they are moonwalking, so everyone comes towards the couple unless the world has stopped.
+            var w = new Walker { dir = speed > 0.5f || Random.value < 0.5f ? -1f : 1f, pace = elder ? Random.Range(0.8f, 1.1f) : Random.Range(1.1f, 1.7f), phase = Random.value * 6f };
             bool front = stage != 4 && !Spectate && Random.value < 0.25f;   // wedding watchers line the far pavement only
             w.z = front ? Random.Range(-6.2f, -5.4f) : Random.Range(3.3f, 4.5f);
             w.y = front ? 0.05f : 0.12f;
@@ -695,9 +700,22 @@ namespace WeddingRun
         void FarKinmen(Transform p, System.Random r, float w)
         {
             Hills(p, r, w, H("#5FAE6E"), H("#6FBB78"), 10, 5, 9);
+            // 太武山: a granite massif with boulders and the red 毋忘在莒 inscription carved into its rock
+            var tw = Node(p, "Taiwu", new Vector3(-55f, 0, 14f));
+            Ball(tw, H("#8E9E86"), new Vector3(0, -3f, 0), new Vector3(52f, 30f, 20f));
+            for (int i = 0; i < 9; i++)
+                Ball(tw, i % 2 == 0 ? H("#BDB8AC") : H("#A8A397"), new Vector3(Rf(r, -14f, 14f), Rf(r, 5f, 10.5f), Rf(r, -9f, -6f)), new Vector3(Rf(r, 2.5f, 5f), Rf(r, 1.8f, 3.2f), 2.5f));
+            Box(tw, H("#D3CEC2"), new Vector3(3f, 8.2f, -10.4f), new Vector3(10f, 3.6f, 1f));
+            Text3D(tw, "毋忘在莒", H("#C8102E"), new Vector3(3f, 8.2f, -10.95f), 13f);
+
+            // the beach: sand, and the old anti-landing rail spikes (軌條砦) facing the sea
+            Box(p, H("#EADBB8"), new Vector3(0, 0.05f, -13f), new Vector3(w + 2f, 0.08f, 3.5f));
+            int n = 0;
+            for (float x = -w / 2; x < w / 2; x += 1.6f, n++)
+                Box(p, H("#5A4038"), new Vector3(x, 0.7f, -15.2f), new Vector3(0.16f, 1.6f, 0.16f), new Vector3(-35f, 0, n % 2 == 0 ? 10f : -10f));
             // sparkling sea + a couple of fishing boats
             for (float x = -w / 2; x < w / 2; x += Rf(r, 1f, 3f))
-                Box(p, H("#E8FBFF"), new Vector3(x, 0.04f, Rf(r, -45f, -16f)), new Vector3(Rf(r, 0.6f, 1.6f), 0.03f, 0.12f), default, true);
+                Box(p, H("#E8FBFF"), new Vector3(x, 0.04f, Rf(r, -45f, -17f)), new Vector3(Rf(r, 0.6f, 1.6f), 0.03f, 0.12f), default, true);
             foreach (float bx in new[] { -50f, 22f, 60f })
             {
                 var b = Node(p, "Boat", new Vector3(bx, 0, Rf(r, -36f, -24f)));
@@ -707,25 +725,18 @@ namespace WeddingRun
                 Cyl(b, H("#5A4A3A"), new Vector3(0.6f, 1.6f, 0), 0.04f, 2f);
                 Box(b, H("#D7263D"), new Vector3(0.9f, 2.3f, 0), new Vector3(0.6f, 0.35f, 0.02f), default, true);
             }
-            // 莒光樓 inspired pavilion
-            var t = Node(p, "Pavilion", new Vector3(0, 0, -6));
-            Box(t, H("#E8DCC6"), new Vector3(0, 1.5f, 0), new Vector3(10, 3, 6));
-            Box(t, H("#C9B79A"), new Vector3(0, 3.2f, 0), new Vector3(11, 0.4f, 7));
-            for (int k = 0; k < 3; k++)
-            {
-                float y = 3.4f + k * 3.6f, s = 1 - k * 0.22f;
-                Box(t, H("#F2E8D5"), new Vector3(0, y + 1.3f, 0), new Vector3(7 * s, 2.6f, 4.6f * s));
-                for (int c = -2; c <= 2; c++) Box(t, H("#C0392B"), new Vector3(c * 1.5f * s, y + 1.3f, -2.35f * s), new Vector3(0.3f, 2.6f, 0.2f));
-                Frus(t, H("#E07B39"), new Vector3(0, y + 2.6f, 0), 6.2f * s, 3.2f * s, 1.3f, new Vector3(0, 45, 0), 4);
-            }
-            Ball(t, Palette.Gold, new Vector3(0, 15.4f, 0), Vector3.one * 0.8f);
-            // little houses and trees on the hills
+
+            JuguangTower(Node(p, "JuguangTower", new Vector3(0, 0, -6)));
+
+            // villages on the hills: red roofs with little swallow tails
             for (float x = -w / 2; x < w / 2; x += Rf(r, 6, 12))
             {
-                if (Mathf.Abs(x) < 9) continue;
+                if (Mathf.Abs(x) < 10 || Mathf.Abs(x + 55f) < 16f) continue;
                 float y = Rf(r, 0, 2.5f), z = Rf(r, -2, 6);
-                Box(p, H("#C4573F"), new Vector3(x, y + 0.9f, z), new Vector3(3, 1.8f, 2));
-                Part(p, MeshKit.Prism(), H("#9E3B2C"), new Vector3(x, y + 1.8f, z), new Vector3(3.4f, 1.1f, 2.4f));
+                Box(p, KBrick, new Vector3(x, y + 0.9f, z), new Vector3(3, 1.8f, 2));
+                Part(p, MeshKit.Prism(), KTile, new Vector3(x, y + 1.8f, z), new Vector3(3.4f, 1.1f, 2.4f));
+                foreach (int sg in new[] { -1, 1 })
+                    Box(p, KRidge, new Vector3(x + sg * 1.75f, y + 3.05f, z), new Vector3(0.7f, 0.14f, 0.2f), new Vector3(0, 0, sg * 35f));
                 Ball(p, H("#3F8F55"), new Vector3(x + 3, y + 2, z + 1), new Vector3(2.4f, 3f, 2.4f));
             }
 
@@ -751,6 +762,43 @@ namespace WeddingRun
             }
         }
 
+        /// <summary>
+        /// 莒光樓: a three-storey palace-style tower (1953) on a raised terrace by a pond, red columns, glazed roofs with
+        /// upturned eaves on every floor, and two cannons in front.
+        /// </summary>
+        static void JuguangTower(Transform t)
+        {
+            Color wall = H("#F2E8D5"), col = H("#C0392B"), roof = H("#E39A3B"), roofDk = H("#B8742A"), stone = H("#D8CFC0");
+            Box(t, H("#6FB7D8"), new Vector3(0, 0.05f, -7.5f), new Vector3(18f, 0.06f, 5f));                 // 莒光湖
+            Box(t, stone, new Vector3(0, 1f, 0), new Vector3(14f, 2f, 8f));                                     // terrace
+            for (int k = 0; k < 4; k++) Box(t, stone, new Vector3(0, 0.25f + k * 0.5f, -4.2f - (3 - k) * 0.5f), new Vector3(4f, 0.5f, 1f));
+            foreach (int sg in new[] { -1, 1 })
+            {
+                Cyl(t, H("#4A4E55"), new Vector3(sg * 5.2f, 2.45f, -3.2f), 0.22f, 1.8f, new Vector3(70, 0, 0)); // cannons
+                Box(t, H("#5A5E66"), new Vector3(sg * 5.2f, 2.2f, -2.9f), new Vector3(0.7f, 0.4f, 0.8f));
+            }
+            float[] wW = { 10f, 7.6f, 5.2f }, wH = { 3.2f, 2.8f, 2.4f }, wD = { 6f, 4.6f, 3.4f };
+            float y = 2f;
+            for (int f = 0; f < 3; f++)
+            {
+                Box(t, wall, new Vector3(0, y + wH[f] / 2, 0), new Vector3(wW[f], wH[f], wD[f]));
+                int cols = f == 0 ? 6 : 4;
+                for (int c = 0; c < cols; c++)
+                    Box(t, col, new Vector3(-wW[f] / 2 + 0.4f + c * (wW[f] - 0.8f) / (cols - 1), y + wH[f] / 2, -wD[f] / 2 - 0.12f), new Vector3(0.32f, wH[f], 0.24f));
+                Box(t, H("#7A2E22"), new Vector3(0, y + 1.0f, -wD[f] / 2 - 0.05f), new Vector3(1.4f, 2.0f, 0.05f));     // doors / windows
+                y += wH[f];
+                // eave: a wide glazed roof whose corners curl up
+                float ew = wW[f] + 2.4f, ed = wD[f] + 2.2f;
+                Box(t, roofDk, new Vector3(0, y + 0.1f, 0), new Vector3(ew, 0.2f, ed));
+                Part(t, MeshKit.Prism(), roof, new Vector3(0, y + 0.2f, 0), new Vector3(ew - 0.4f, f == 2 ? 1.8f : 0.9f, ed - 0.4f));
+                foreach (int sg in new[] { -1, 1 })
+                    Box(t, roofDk, new Vector3(sg * (ew / 2 + 0.25f), y + 0.45f, -ed / 2 + 0.2f), new Vector3(0.9f, 0.18f, 0.3f), new Vector3(0, 0, sg * 30f));
+                y += f == 2 ? 1.8f : 0.6f;
+            }
+            Box(t, roofDk, new Vector3(0, y + 0.15f, 0), new Vector3(4.2f, 0.3f, 0.35f));                      // top ridge
+            foreach (int sg in new[] { -1, 1 }) SwallowTail(t, new Vector3(sg * 2.1f, y + 0.15f, 0), sg, 0.8f, roofDk);
+        }
+
         void FarTaipei(Transform p, System.Random r, float w)
         {
             // Taipei at night: dark mountains, lit windows, Taipei 101 with glowing bands
@@ -765,6 +813,12 @@ namespace WeddingRun
                 Box(p, Pick(r, body), c, new Vector3(bw, h, d));
                 Windows(p, r, c, new Vector3(bw, h, d), 0.55f, lit);
                 if (r.NextDouble() < 0.25) Box(p, Pick(r, new[] { H("#FF5C8A"), H("#4FE3FF"), H("#FFD23F") }), new Vector3(c.x, h + 0.45f, z - d / 2), new Vector3(bw * 0.7f, 0.8f, 0.2f), default, true);
+                // Taipei apartment roofs: stainless water tanks and tin add-on rooms (頂樓加蓋); iron window grilles (鐵窗)
+                if (r.NextDouble() < 0.5) Cyl(p, H("#B9BFCB"), new Vector3(c.x + Rf(r, -bw * 0.3f, bw * 0.3f), h + 0.55f, z + 0.5f), 0.42f, 1.1f);
+                if (r.NextDouble() < 0.35) Box(p, Pick(r, new[] { H("#4E6C8A"), H("#5E5A6E"), H("#3F6A6A") }), new Vector3(c.x - bw * 0.15f, h + 0.45f, z + 0.3f), new Vector3(bw * 0.5f, 0.9f, d * 0.6f));
+                if (r.NextDouble() < 0.4)
+                    for (float gx = c.x - bw / 2 + 0.3f; gx < c.x + bw / 2 - 0.1f; gx += 0.45f)
+                        Box(p, H("#1E1C2A"), new Vector3(gx, h * 0.32f, z - d / 2 - 0.08f), new Vector3(0.05f, h * 0.5f, 0.04f));
                 x += bw + Rf(r, 0.4f, 2f);
             }
             // Taipei 101 inspired tower, lit up at night
@@ -777,6 +831,9 @@ namespace WeddingRun
                 Box(t, band, new Vector3(0, 5 + k * 2.2f + 2.1f, -2.08f), new Vector3(4.1f, 0.14f, 0.05f), default, true);
                 Box(t, H("#FFE7A8"), new Vector3(0, 5 + k * 2.2f + 1.1f, -1.85f), new Vector3(2.2f, 0.12f, 0.05f), default, true);
             }
+            // the giant ancient-coin ornament on the base section
+            Cyl(t, H("#D9B44A"), new Vector3(0, 3.3f, -3.25f), 0.85f, 0.12f, new Vector3(90, 0, 0));
+            Box(t, glassDark, new Vector3(0, 3.3f, -3.33f), new Vector3(0.55f, 0.55f, 0.04f));
             Box(t, glassDark, new Vector3(0, 23.4f, 0), new Vector3(2.2f, 1.2f, 2.2f));
             Box(t, glass, new Vector3(0, 24.6f, 0), new Vector3(1.4f, 1.2f, 1.4f));
             Cyl(t, H("#C9D3D6"), new Vector3(0, 27.2f, 0), 0.18f, 4f);
@@ -869,6 +926,9 @@ namespace WeddingRun
             var st = Node(p, "NagoyaStation", new Vector3(-27, 0, 14));
             st.localScale = Vector3.one * 0.8f;
             NagoyaStation(st);
+            var sp = Node(p, "SpiralTowers", new Vector3(-13.5f, 0, 12f));
+            sp.localScale = Vector3.one * 0.8f;
+            SpiralTower(sp);
 
             // ---- sightseeing: Sunshine Sakae with the Ferris wheel built into the building
             var ss = Node(p, "SunshineSakae", new Vector3(41, 0, 0));
@@ -895,6 +955,27 @@ namespace WeddingRun
         /// tower 226 m, both standing on the station building), Midland Square (247 m) nearby, the slim curved
         /// Lucent Tower (180 m) and the Dai Nagoya Building with its famous name sign.
         /// </summary>
+        /// <summary>Mode Gakuen Spiral Towers (170 m, near Nagoya Station): glass wings that twist round a core as the tower rises and tapers.</summary>
+        static void SpiralTower(Transform t)
+        {
+            float u = 22f / 180f, top = 170f * u;
+            Color glass = H("#A9BCD0"), glassDk = H("#8EA3BA");
+            Cyl(t, H("#C9D3DE"), new Vector3(0, top * 0.45f, 0), 0.5f, top * 0.9f);
+            const int layers = 20;
+            for (int i = 0; i < layers; i++)
+            {
+                float k = i / (float)(layers - 1), y = 1f + k * (top - 3f);
+                float sc = Mathf.Lerp(1f, 0.25f, k * k);
+                var layer = Node(t, "Layer", new Vector3(0, y, 0), new Vector3(0, i * 9f, 0));
+                for (int wg = 0; wg < 3; wg++)
+                {
+                    var wing = Node(layer, "Wing", Vector3.zero, new Vector3(0, wg * 120f, 0));
+                    Ball(wing, i % 2 == 0 ? glass : glassDk, new Vector3(1.0f * sc, 0, 0), new Vector3(2.6f * sc, (top - 3f) / layers * 1.15f, 1.3f * sc));
+                }
+            }
+            Cyl(t, H("#E9EEF4"), new Vector3(0, top, 0), 0.08f, 2.4f);
+        }
+
         static void NagoyaStation(Transform t)
         {
             float u = 22f / 180f;   // same scale as the MIRAI TOWER
@@ -964,11 +1045,11 @@ namespace WeddingRun
             }
         }
 
-        static void Beam(Transform p, Vector3 a, Vector3 b, float th, Color c)
+        static void Beam(Transform p, Vector3 a, Vector3 b, float th, Color c, bool unlit = false)
         {
             Vector3 d = b - a;
             if (d.sqrMagnitude < 1e-6f) return;
-            var tr = Part(p, MeshKit.Cube, c, (a + b) / 2, new Vector3(th, d.magnitude, th));
+            var tr = Part(p, MeshKit.Cube, c, (a + b) / 2, new Vector3(th, d.magnitude, th), default, unlit);
             tr.localRotation = Quaternion.FromToRotation(Vector3.up, d.normalized);
         }
 
@@ -1208,6 +1289,7 @@ namespace WeddingRun
                     t.lineSpacing = -22;
                 }
             }
+            PawnSign(p, new Vector3(24.4f, 5.6f, -1.6f));
             ClockTower(Node(p, "ClockTower", new Vector3(-3f, 0, 1.2f)));
             foreach (float lx in new[] { -18f, -9f, 3.5f, 11f, 18f, 23f, 34f }) Lamp(p, lx, H("#3A3550"), H("#FFE6A8"));
             for (float bx = -16f; bx < 24f; bx += 4.5f)
@@ -1228,6 +1310,30 @@ namespace WeddingRun
             Box(car, H("#9FD4F0"), new Vector3(-0.2f, 1.42f, -0.76f), new Vector3(1.7f, 0.45f, 0.02f), default, true);
             Box(car, H("#FFE07A"), new Vector3(-0.2f, 1.85f, 0), new Vector3(0.5f, 0.2f, 0.3f), default, true);
             foreach (float wx in new[] { -1.2f, 1.2f }) Cyl(car, H("#1D1B22"), new Vector3(wx, 0.36f, -0.6f), 0.36f, 0.3f, new Vector3(90, 0, 0));
+        }
+
+        /// <summary>
+        /// Hong Kong pawnshop sign (蝠鼠吊金錢): a bat (蝠 = 福, luck) on top holding a gourd-shaped board with 押,
+        /// outlined in neon and hung high over the street.
+        /// </summary>
+        static void PawnSign(Transform p, Vector3 at)
+        {
+            var s = Node(p, "PawnSign", at);
+            Color wood = H("#5A1E1E"), neon = H("#FF4F6A");
+            Box(s, H("#3A3550"), new Vector3(0, 0.9f, 0.9f), new Vector3(0.08f, 0.08f, 1.8f));      // bracket to the wall
+            Ball(s, wood, new Vector3(0, 0.75f, 0), new Vector3(0.5f, 0.4f, 0.2f));                    // the bat
+            foreach (int sg in new[] { -1, 1 })
+            {
+                Box(s, wood, new Vector3(sg * 0.55f, 0.82f, 0), new Vector3(0.7f, 0.22f, 0.12f), new Vector3(0, 0, sg * 22f));
+                Box(s, wood, new Vector3(sg * 0.98f, 1.02f, 0), new Vector3(0.3f, 0.14f, 0.12f), new Vector3(0, 0, sg * 50f));
+                Box(s, neon, new Vector3(sg * 0.55f, 0.95f, -0.07f), new Vector3(0.7f, 0.035f, 0.02f), new Vector3(0, 0, sg * 22f), true);
+            }
+            Cyl(s, wood, new Vector3(0, 0.3f, 0), 0.06f, 0.5f);
+            Cyl(s, wood, new Vector3(0, -0.1f, 0), 0.32f, 0.12f, new Vector3(90, 0, 0));                // gourd: small bulb
+            Cyl(s, wood, new Vector3(0, -0.9f, 0), 0.62f, 0.12f, new Vector3(90, 0, 0));                // gourd: big bulb
+            Part(s, MeshKit.Torus(0.62f, 0.035f, 24, 4), neon, new Vector3(0, -0.9f, -0.08f), Vector3.one, default, true);
+            Part(s, MeshKit.Torus(0.32f, 0.03f, 18, 4), neon, new Vector3(0, -0.1f, -0.08f), Vector3.one, default, true);
+            Text3D(s, "押", Palette.Gold, new Vector3(0, -0.92f, -0.1f), 8f);
         }
 
         /// <summary>
@@ -1380,30 +1486,24 @@ namespace WeddingRun
 
         void MidKinmen(Transform p, System.Random r, float w)
         {
-            for (float x = -w / 2 + 4; x < w / 2; x += 18f)
+            // A Kinmen village street like 水頭 / 珠山 / 山后: Minnan houses with red-tile roofs, granite bases and red-brick
+            // walls (swallow-tail 燕尾 or horseback 馬背 ridges), a Nanyang-style Western mansion with its gun tower,
+            // a granite memorial archway, red-brick walls with tile flowers, wind lion guardians and village trees.
+            MinnanHouse(Node(p, "MinnanHouse", new Vector3(-28f, 0, 1.6f)), true, "穎川衍派");
+            WindLionGod(Node(p, "WindLionGod", new Vector3(-19.6f, 0, -1.5f)));
+            Casuarina(p, -17.4f, 0.6f);
+            GunTower(Node(p, "GunTower", new Vector3(-14.4f, 0, 2.4f)), H("#EDE6DA"));
+            NanyangMansion(Node(p, "NanyangMansion", new Vector3(-8.6f, 0, 2.2f)), H("#F2CFC8"), H("#FFF8EE"));
+            TileFlowerWall(p, -3f, 3.2f, 0.4f);
+            MemorialArch(Node(p, "MemorialArch", new Vector3(3.2f, 0, 0.4f)));
+            MinnanHouse(Node(p, "MinnanHouse", new Vector3(20.2f, 0, 1.6f)), false, "西河衍派");
+            WindLionGod(Node(p, "WindLionGod", new Vector3(29.2f, 0, -1.5f)));
+            Banyan(p, 32.6f, 1.4f);
+            // bougainvillea spilling over the walls
+            foreach (float bx in new[] { -21.8f, -4.2f, 26.2f })
             {
-                // Minnan red-brick house with swallow-tail roof
-                var h = Node(p, "MinnanHouse", new Vector3(x, 0, 1.5f));
-                Box(h, H("#E9DFD0"), new Vector3(0, 0.4f, 0), new Vector3(7.4f, 0.8f, 3.4f));
-                Box(h, H("#B9533F"), new Vector3(0, 2.0f, 0), new Vector3(7.2f, 2.6f, 3.2f));
-                Box(h, H("#7A2E22"), new Vector3(0, 1.4f, -1.62f), new Vector3(1.4f, 2.2f, 0.05f));
-                Box(h, Palette.Gold, new Vector3(0, 2.75f, -1.64f), new Vector3(1.0f, 0.3f, 0.02f), default, true);
-                Box(h, H("#E9DFD0"), new Vector3(-2.4f, 2f, -1.62f), new Vector3(1.1f, 1f, 0.05f));
-                Box(h, H("#E9DFD0"), new Vector3(2.4f, 2f, -1.62f), new Vector3(1.1f, 1f, 0.05f));
-                Part(h, MeshKit.Prism(), H("#C8553A"), new Vector3(0, 3.3f, 0), new Vector3(7.6f, 1.5f, 3.8f));
-                Box(h, H("#A23F2C"), new Vector3(0, 4.8f, 0), new Vector3(6.6f, 0.25f, 0.35f));
-                Box(h, H("#A23F2C"), new Vector3(-3.7f, 5.15f, 0), new Vector3(1.4f, 0.22f, 0.3f), new Vector3(0, 0, -35));
-                Box(h, H("#A23F2C"), new Vector3(3.7f, 5.15f, 0), new Vector3(1.4f, 0.22f, 0.3f), new Vector3(0, 0, 35));
-                Box(h, H("#D7263D"), new Vector3(-0.9f, 2.0f, -1.65f), new Vector3(0.35f, 0.9f, 0.02f), default, true); // spring couplets
-                Box(h, H("#D7263D"), new Vector3(0.9f, 2.0f, -1.65f), new Vector3(0.35f, 0.9f, 0.02f), default, true);
-
-                // Wind Lion God guardian statue
-                WindLionGod(Node(p, "WindLionGod", new Vector3(x + 9, 0, -1.5f)));
-                Tree(p, x + 13, 2, H("#4F9E5E"), H("#64B06F"), 1.1f);
-                // bougainvillea spilling over the walls
-                Ball(p, H("#D63A8E"), new Vector3(x + 3.4f, 3.4f, 0.2f), new Vector3(1.8f, 1.2f, 1.2f));
-                Ball(p, H("#E85AA6"), new Vector3(x + 4.0f, 2.6f, -0.1f), new Vector3(1.2f, 1.0f, 1.0f));
-                Ball(p, H("#3F8F55"), new Vector3(x - 3.8f, 1.0f, -0.4f), new Vector3(1.6f, 1.2f, 1.2f));
+                Ball(p, H("#D63A8E"), new Vector3(bx, 2.3f, 0.1f), new Vector3(1.6f, 1.1f, 1.1f));
+                Ball(p, H("#E85AA6"), new Vector3(bx + 0.6f, 1.7f, -0.2f), new Vector3(1.1f, 0.9f, 0.9f));
             }
 
             // ---- sightseeing: the giant Kinmen Kaoliang liquor bottle
@@ -1417,6 +1517,218 @@ namespace WeddingRun
             Box(bt, H("#C8102E"), new Vector3(0, 2.5f, -0.94f), new Vector3(1.0f, 1.8f, 0.04f));
             var lbl = Text3D(bt, "金門\n高粱", Palette.Gold, new Vector3(0, 2.5f, -0.97f), 3.4f);
             lbl.lineSpacing = -15;
+        }
+
+        // ------------------------------------------------------------------ Kinmen building kit
+        static readonly Color KGranite = H("#E6E0D4"), KGraniteDk = H("#C9C1B2"), KBrick = H("#B8452F"), KBrickDk = H("#9C3524"),
+                              KTile = H("#C9573B"), KTileDk = H("#A8432D"), KRidge = H("#9E3B28");
+        static Mesh tileFlower;
+
+        /// <summary>Minnan house (閩南古厝): granite base, red-brick walls, recessed entrance with door gods and family plaque, stone windows, side wings.</summary>
+        static void MinnanHouse(Transform h, bool swallowTail, string plaque)
+        {
+            foreach (int sg in new[] { -1, 1 })
+            {
+                // side wings (櫸頭): lower, a little forward, with horseback gable ends
+                var wing = Node(h, "Wing", new Vector3(sg * 5.4f, 0, -0.5f));
+                Box(wing, KGranite, new Vector3(0, 0.45f, 0), new Vector3(3.0f, 0.9f, 2.6f));
+                Box(wing, KBrick, new Vector3(0, 1.85f, 0), new Vector3(3.0f, 1.9f, 2.6f));
+                for (float y = 1.2f; y < 2.8f; y += 0.3f) Box(wing, KBrickDk, new Vector3(0, y, -1.305f), new Vector3(3.0f, 0.03f, 0.01f));
+                StoneWindow(wing, new Vector3(0, 1.9f, -1.33f), 0.9f, 0.8f);
+                TiledRoof(wing, new Vector3(0, 2.8f, 0), 3.3f, 0.8f, 2.9f, 0.38f);
+                Ball(wing, KRidge, new Vector3(sg * 1.55f, 3.45f, 0), new Vector3(0.55f, 0.55f, 0.35f));
+            }
+            // main hall
+            Box(h, KGranite, new Vector3(0, 0.5f, 0), new Vector3(7.6f, 1.0f, 3.4f));
+            Box(h, KGraniteDk, new Vector3(0, 1.0f, -1.71f), new Vector3(7.6f, 0.06f, 0.02f));
+            Box(h, KGraniteDk, new Vector3(0, 0.5f, -1.71f), new Vector3(7.6f, 0.04f, 0.02f));
+            Box(h, KBrick, new Vector3(0, 2.3f, 0), new Vector3(7.6f, 2.6f, 3.4f));
+            for (float y = 1.3f; y < 3.55f; y += 0.3f) Box(h, KBrickDk, new Vector3(0, y, -1.705f), new Vector3(7.6f, 0.03f, 0.01f));
+            // recessed entrance (凹壽): granite door frame, wooden doors with door gods, couplets, family plaque, lanterns
+            Box(h, H("#5B2A22"), new Vector3(0, 1.95f, -1.708f), new Vector3(2.7f, 2.9f, 0.02f));
+            foreach (int sg in new[] { -1, 1 }) Box(h, KGranite, new Vector3(sg * 0.79f, 1.7f, -1.73f), new Vector3(0.22f, 2.4f, 0.06f));
+            Box(h, KGranite, new Vector3(0, 2.98f, -1.73f), new Vector3(1.8f, 0.22f, 0.06f));
+            Box(h, H("#3E1F16"), new Vector3(0, 1.7f, -1.72f), new Vector3(1.36f, 2.4f, 0.02f));
+            foreach (int sg in new[] { -1, 1 })
+            {
+                Box(h, H("#C8202E"), new Vector3(sg * 0.34f, 1.75f, -1.74f), new Vector3(0.52f, 1.6f, 0.01f), default, true);
+                Cyl(h, Palette.Gold, new Vector3(sg * 0.34f, 2.1f, -1.75f), 0.11f, 0.01f, new Vector3(90, 0, 0), true);
+                Box(h, H("#D7263D"), new Vector3(sg * 1.1f, 1.9f, -1.73f), new Vector3(0.26f, 1.7f, 0.01f), default, true);
+                StoneWindow(h, new Vector3(sg * 2.65f, 2.25f, -1.72f), 1.1f, 1.0f);
+                Ball(h, H("#E0303C"), new Vector3(sg * 1.32f, 2.95f, -1.98f), new Vector3(0.34f, 0.42f, 0.34f), default, true);
+                Cyl(h, Palette.Gold, new Vector3(sg * 1.32f, 3.19f, -1.98f), 0.08f, 0.06f);
+            }
+            Box(h, H("#2A1E1A"), new Vector3(0, 3.36f, -1.74f), new Vector3(1.9f, 0.46f, 0.03f));
+            Text3D(h, plaque, Palette.Gold, new Vector3(0, 3.36f, -1.77f), 2.2f);
+            // roof: red tiles in rows, main ridge with cut-porcelain decoration and swallow-tail or horseback ends
+            TiledRoof(h, new Vector3(0, 3.6f, 0), 8.2f, 1.6f, 4.0f, 0.36f);
+            Box(h, KRidge, new Vector3(0, 5.3f, 0), new Vector3(6.6f, 0.3f, 0.36f));
+            Box(h, H("#3FA37A"), new Vector3(-0.38f, 5.52f, 0), new Vector3(0.4f, 0.16f, 0.2f));
+            Box(h, H("#F2C14E"), new Vector3(0, 5.56f, 0), new Vector3(0.3f, 0.22f, 0.2f));
+            Box(h, H("#3D7DFF"), new Vector3(0.38f, 5.52f, 0), new Vector3(0.4f, 0.16f, 0.2f));
+            foreach (int sg in new[] { -1, 1 })
+            {
+                if (swallowTail) SwallowTail(h, new Vector3(sg * 3.25f, 5.3f, 0), sg, 1f, KRidge);
+                else Ball(h, KRidge, new Vector3(sg * 3.55f, 5.15f, 0), new Vector3(1.0f, 0.9f, 0.4f));
+            }
+        }
+
+        /// <summary>Gable roof whose front slope faces the camera, with rows of tiles running down the slope.</summary>
+        static void TiledRoof(Transform h, Vector3 basePos, float len, float height, float depth, float spacing)
+        {
+            Part(h, MeshKit.Prism(), KTile, basePos, new Vector3(len, height, depth));
+            float half = depth / 2, slope = Mathf.Sqrt(height * height + half * half);
+            float ang = Mathf.Atan2(height, half) * Mathf.Rad2Deg;
+            Vector3 normal = new Vector3(0, half, -height) / slope;
+            Vector3 mid = basePos + new Vector3(0, height / 2, -half / 2) + normal * 0.03f;
+            for (float x = -len / 2 + spacing / 2; x < len / 2; x += spacing)
+                Box(h, KTileDk, mid + new Vector3(x, 0, 0), new Vector3(0.07f, 0.03f, slope), new Vector3(-ang, 0, 0));
+            Box(h, KTileDk, basePos + new Vector3(0, 0.05f, -half), new Vector3(len, 0.1f, 0.12f));
+        }
+
+        /// <summary>Swallow-tail ridge end (燕尾): the ridge sweeps upwards and splits into two tips.</summary>
+        static void SwallowTail(Transform h, Vector3 start, int sg, float s, Color c)
+        {
+            Vector3 at = start;
+            foreach (float a in new[] { 8f, 20f, 34f })
+            {
+                var d = new Vector3(sg * Mathf.Cos(a * Mathf.Deg2Rad), Mathf.Sin(a * Mathf.Deg2Rad), 0);
+                float len = 0.55f * s;
+                Box(h, c, at + d * (len / 2), new Vector3(len + 0.06f * s, 0.26f * s, 0.32f * s), new Vector3(0, 0, sg * a));
+                at += d * len;
+            }
+            foreach (float a in new[] { 60f, 36f })
+            {
+                var d = new Vector3(sg * Mathf.Cos(a * Mathf.Deg2Rad), Mathf.Sin(a * Mathf.Deg2Rad), 0);
+                float len = 0.7f * s;
+                Box(h, c, at + d * (len / 2), new Vector3(len, 0.09f * s, 0.26f * s), new Vector3(0, 0, sg * a));
+            }
+        }
+
+        /// <summary>Granite window with stone bars (石窗).</summary>
+        static void StoneWindow(Transform h, Vector3 c, float w, float hgt)
+        {
+            Box(h, KGranite, c, new Vector3(w, hgt, 0.06f));
+            Box(h, H("#3A2620"), c + new Vector3(0, 0, -0.02f), new Vector3(w * 0.76f, hgt * 0.74f, 0.04f));
+            for (int k = 0; k < 5; k++)
+                Box(h, KGranite, c + new Vector3(-w * 0.3f + k * w * 0.15f, 0, -0.05f), new Vector3(0.06f, hgt * 0.74f, 0.03f));
+        }
+
+        /// <summary>Nanyang-style Western mansion (洋樓) built by merchants back from Southeast Asia: two storeys of arcades, green shutters, a parapet with a pediment.</summary>
+        static void NanyangMansion(Transform m, Color wall, Color trim)
+        {
+            Box(m, KGranite, new Vector3(0, 0.25f, 0), new Vector3(8.6f, 0.5f, 4.4f));
+            Box(m, Color.Lerp(wall, Color.black, 0.18f), new Vector3(0, 3.6f, 0.6f), new Vector3(8f, 6.2f, 3.0f));   // back wall, in the arcade's shade
+            foreach (int sg in new[] { -1, 1 }) Box(m, wall, new Vector3(sg * 4.15f, 3.6f, -0.6f), new Vector3(0.3f, 6.2f, 2.6f));
+            if (tileFlower == null) tileFlower = MeshKit.Torus(0.14f, 0.035f, 12, 4);
+            var arch = MeshKit.Torus(0.74f, 0.1f, 16, 4, 180f);
+            foreach (float fy in new[] { 0.5f, 3.6f })
+            {
+                for (int b = 0; b < 4; b++)
+                {
+                    float xc = -2.85f + b * 1.9f;
+                    Box(m, H("#3E8C7E"), new Vector3(xc, fy + 1.15f, -0.92f), new Vector3(0.62f, 1.5f, 0.04f));      // green shutters
+                    Box(m, Color.white, new Vector3(xc, fy + 1.15f, -0.95f), new Vector3(0.04f, 1.5f, 0.02f));
+                    Part(m, arch, trim, new Vector3(xc, fy + 1.86f, -1.85f), Vector3.one);
+                    foreach (int sg in new[] { -1, 1 }) Box(m, wall, new Vector3(xc + sg * 0.6f, fy + 2.48f, -1.85f), new Vector3(0.38f, 0.45f, 0.3f));
+                }
+                for (int c = 0; c < 5; c++)
+                    Box(m, trim, new Vector3(-3.8f + c * 1.9f, fy + 1.35f, -1.85f), new Vector3(0.42f, 2.7f, 0.42f));
+                Box(m, wall, new Vector3(0, fy + 2.85f, -1.75f), new Vector3(8.4f, 0.4f, 0.6f));
+            }
+            // balustrade on the upper veranda
+            Box(m, trim, new Vector3(0, 4.45f, -1.9f), new Vector3(8f, 0.1f, 0.3f));
+            for (float x = -3.6f; x <= 3.6f; x += 0.3f)
+                if (Mathf.Abs(Mathf.Repeat(x + 3.8f, 1.9f)) > 0.3f) Cyl(m, trim, new Vector3(x, 4.05f, -1.9f), 0.045f, 0.75f);
+            // parapet and pediment
+            Box(m, trim, new Vector3(0, 6.75f, -1.7f), new Vector3(8.8f, 0.12f, 0.7f));
+            Box(m, wall, new Vector3(0, 7.15f, -1.6f), new Vector3(8.6f, 0.7f, 0.5f));
+            Part(m, MeshKit.Prism(), wall, new Vector3(0, 7.5f, -1.6f), new Vector3(3.0f, 1.0f, 0.5f));
+            Cyl(m, H("#D7263D"), new Vector3(0, 7.8f, -1.87f), 0.25f, 0.04f, new Vector3(90, 0, 0));
+        }
+
+        /// <summary>Gun tower (銃樓) that guarded the mansions against pirates: tall, small gun slits, a crenellated top.</summary>
+        static void GunTower(Transform t, Color wall)
+        {
+            Box(t, KGranite, new Vector3(0, 0.9f, 0), new Vector3(2.6f, 1.8f, 2.6f));
+            Box(t, wall, new Vector3(0, 4.9f, 0), new Vector3(2.4f, 6.2f, 2.4f));
+            for (int f = 0; f < 3; f++)
+                foreach (float x in new[] { -0.55f, 0.55f })
+                    Box(t, H("#2A2020"), new Vector3(x, 2.6f + f * 1.7f, -1.21f), new Vector3(0.14f, 0.45f, 0.02f));
+            Box(t, H("#3E8C7E"), new Vector3(0, 7.25f, -1.21f), new Vector3(0.6f, 0.8f, 0.02f));
+            Box(t, KGraniteDk, new Vector3(0, 8.1f, 0), new Vector3(2.8f, 0.2f, 2.8f));
+            Box(t, wall, new Vector3(0, 8.3f, 0), new Vector3(2.6f, 0.3f, 2.6f));
+            for (int k = 0; k < 4; k++) Box(t, wall, new Vector3(-1.05f + k * 0.7f, 8.6f, -1.15f), new Vector3(0.4f, 0.5f, 0.3f));
+        }
+
+        /// <summary>Granite memorial archway (牌坊): four pillars and three bays, carved panels, a plaque and tiered roofs.</summary>
+        static void MemorialArch(Transform a)
+        {
+            Color st = H("#CFC8BB"), dk = H("#A9A196"), roof = H("#B8B0A3");
+            foreach (float x in new[] { -2.7f, -0.95f, 0.95f, 2.7f })
+            {
+                float hgt = Mathf.Abs(x) > 2f ? 3.75f : 4.8f;
+                Box(a, st, new Vector3(x, hgt / 2, 0), new Vector3(0.5f, hgt, 0.5f));
+                Box(a, dk, new Vector3(x, 0.35f, 0), new Vector3(0.8f, 0.7f, 0.9f));
+            }
+            foreach (int sg in new[] { -1, 1 })
+            {
+                float cx = sg * 1.825f;
+                Box(a, st, new Vector3(cx, 2.9f, 0), new Vector3(1.9f, 0.3f, 0.4f));
+                Box(a, H("#E2DCD0"), new Vector3(cx, 3.25f, -0.05f), new Vector3(1.5f, 0.4f, 0.3f));
+                Box(a, st, new Vector3(cx, 3.6f, 0), new Vector3(1.9f, 0.25f, 0.4f));
+                Part(a, MeshKit.Prism(), roof, new Vector3(cx, 3.75f, 0), new Vector3(2.3f, 0.55f, 1.0f));
+                SwallowTail(a, new Vector3(cx + sg * 0.9f, 4.25f, 0), sg, 0.35f, dk);
+            }
+            Box(a, st, new Vector3(0, 3.3f, 0), new Vector3(2.0f, 0.3f, 0.4f));
+            Box(a, H("#7F786C"), new Vector3(0, 3.85f, -0.1f), new Vector3(1.5f, 0.7f, 0.2f));
+            Text3D(a, "節孝", Palette.Gold, new Vector3(0, 3.85f, -0.22f), 3.2f);
+            Box(a, st, new Vector3(0, 4.35f, 0), new Vector3(2.0f, 0.3f, 0.4f));
+            Part(a, MeshKit.Prism(), roof, new Vector3(0, 4.8f, 0), new Vector3(2.8f, 0.7f, 1.1f));
+            Box(a, dk, new Vector3(0, 5.52f, 0), new Vector3(2.0f, 0.12f, 0.15f));
+            foreach (int sg in new[] { -1, 1 }) SwallowTail(a, new Vector3(sg * 1.0f, 5.52f, 0), sg, 0.45f, dk);
+        }
+
+        /// <summary>Red-brick courtyard wall on a granite base with red-tile flower openings (瓦花).</summary>
+        static void TileFlowerWall(Transform p, float xc, float len, float z)
+        {
+            if (tileFlower == null) tileFlower = MeshKit.Torus(0.14f, 0.035f, 12, 4);
+            Box(p, KGranite, new Vector3(xc, 0.3f, z), new Vector3(len, 0.6f, 0.4f));
+            Box(p, KBrick, new Vector3(xc, 1.3f, z), new Vector3(len, 1.4f, 0.36f));
+            Box(p, KTileDk, new Vector3(xc, 2.05f, z), new Vector3(len + 0.2f, 0.12f, 0.5f));
+            int n = Mathf.Max(1, Mathf.RoundToInt(len / 1.1f));
+            for (int i = 0; i < n; i++)
+            {
+                float x = xc - len / 2 + (i + 0.5f) * len / n;
+                Box(p, H("#5B2A22"), new Vector3(x, 1.45f, z - 0.19f), new Vector3(0.62f, 0.62f, 0.02f));
+                for (int k = 0; k < 4; k++)
+                    Part(p, tileFlower, KTile, new Vector3(x + (k % 2 == 0 ? -0.14f : 0.14f), 1.45f + (k < 2 ? 0.14f : -0.14f), z - 0.21f), Vector3.one);
+            }
+        }
+
+        /// <summary>Casuarina (木麻黃), the tall wind-break tree along Kinmen's roads.</summary>
+        static void Casuarina(Transform p, float x, float z, float s = 1f)
+        {
+            Cyl(p, H("#6E5440"), new Vector3(x, 2.6f * s, z), 0.14f * s, 5.2f * s);
+            Color a = H("#3E6E4A"), b = H("#4E8059");
+            Ball(p, a, new Vector3(x, 3.4f * s, z), new Vector3(1.9f, 1.5f, 1.9f) * s);
+            Ball(p, b, new Vector3(x + 0.2f * s, 4.5f * s, z), new Vector3(1.6f, 1.5f, 1.6f) * s);
+            Ball(p, a, new Vector3(x - 0.1f * s, 5.5f * s, z), new Vector3(1.2f, 1.4f, 1.2f) * s);
+            Ball(p, b, new Vector3(x, 6.3f * s, z), new Vector3(0.7f, 1.0f, 0.7f) * s);
+        }
+
+        /// <summary>The big banyan tree (榕樹) of the village square, with hanging aerial roots.</summary>
+        static void Banyan(Transform p, float x, float z)
+        {
+            Color bark = H("#7A6656");
+            Cyl(p, bark, new Vector3(x, 1.3f, z), 0.5f, 2.6f);
+            foreach (int sg in new[] { -1, 1 }) Cyl(p, bark, new Vector3(x + sg * 0.6f, 2.7f, z), 0.2f, 1.6f, new Vector3(0, 0, -sg * 35f));
+            Color a = H("#3F7F4E"), b = H("#4F9159");
+            Ball(p, a, new Vector3(x, 3.9f, z), new Vector3(5.6f, 2.6f, 3.6f));
+            Ball(p, b, new Vector3(x - 1.9f, 3.5f, z - 0.4f), new Vector3(3.0f, 2.0f, 2.6f));
+            Ball(p, b, new Vector3(x + 2.0f, 3.6f, z - 0.3f), new Vector3(3.2f, 2.0f, 2.6f));
+            Ball(p, a, new Vector3(x + 0.4f, 4.8f, z), new Vector3(3.4f, 1.8f, 2.8f));
+            for (int i = 0; i < 7; i++) Cyl(p, H("#8A7460"), new Vector3(x - 2.4f + i * 0.8f, 2.0f, z - 0.9f), 0.03f, 1.6f);
         }
 
         /// <summary>
@@ -1683,12 +1995,18 @@ namespace WeddingRun
             for (float x = -w / 2; x < w / 2; x += 6f)
             {
                 // low granite wall segment
-                Box(p, H("#B9B3A8"), new Vector3(x + 1.5f, 0.32f, 0.2f), new Vector3(3f, 0.55f, 0.5f));
+                Box(p, KGraniteDk, new Vector3(x + 1.5f, 0.32f, 0.2f), new Vector3(3f, 0.55f, 0.5f));
                 Box(p, H("#A49E94"), new Vector3(x + 1.5f, 0.62f, 0.2f), new Vector3(3.1f, 0.08f, 0.6f));
-                // bougainvillea and grass
-                Ball(p, H("#D63A8E"), new Vector3(x + 4.2f, 0.45f, 0.1f), new Vector3(1.0f, 0.8f, 0.8f));
-                Ball(p, H("#3F8F55"), new Vector3(x + 4.9f, 0.3f, -0.2f), new Vector3(0.8f, 0.5f, 0.7f));
-                for (int i = 0; i < 3; i++) Ball(p, H("#7CC46B"), new Vector3(x + Rf(r, 0, 6), 0.12f, Rf(r, -1.2f, -0.4f)), new Vector3(0.35f, 0.2f, 0.35f));
+                // a patch of sorghum (高粱), the crop behind Kinmen's famous liquor
+                for (int k = 0; k < 7; k++)
+                {
+                    float sx = x + 3.5f + k * 0.32f + Rf(r, -0.06f, 0.06f), sz = -1.0f + Rf(r, -0.25f, 0.25f), sh = Rf(r, 1.0f, 1.25f);
+                    Cyl(p, H("#8DA65A"), new Vector3(sx, sh / 2, sz), 0.025f, sh);
+                    Box(p, H("#7FA04E"), new Vector3(sx + 0.16f, sh * 0.55f, sz), new Vector3(0.42f, 0.04f, 0.08f), new Vector3(0, 0, 30f));
+                    Box(p, H("#7FA04E"), new Vector3(sx - 0.16f, sh * 0.4f, sz), new Vector3(0.42f, 0.04f, 0.08f), new Vector3(0, 0, -30f));
+                    Ball(p, k % 2 == 0 ? H("#A8442A") : H("#B5532F"), new Vector3(sx, sh + 0.1f, sz), new Vector3(0.13f, 0.3f, 0.13f));
+                }
+                for (int i = 0; i < 3; i++) Ball(p, H("#7CC46B"), new Vector3(x + Rf(r, 0, 3), 0.12f, Rf(r, -1.2f, -0.4f)), new Vector3(0.35f, 0.2f, 0.35f));
             }
         }
 
@@ -1769,8 +2087,11 @@ namespace WeddingRun
                 Box(p, t.c, new Vector3(t.x, deck - 0.5f, tz), new Vector3(2.6f, 0.3f, 0.5f));
                 for (int k = 1; k <= 4; k++)
                     foreach (int sg in new[] { -1, 1 })
-                        Beam(p, new Vector3(t.x, t.h - 0.6f, tz - 0.2f), new Vector3(t.x + sg * k * 2.6f, deck + 0.2f, tz - 0.2f), 0.05f, H("#F4F6F8"));
+                        Beam(p, new Vector3(t.x, t.h - 0.6f, tz - 0.2f), new Vector3(t.x + sg * k * 2.6f, deck + 0.2f, tz - 0.2f), 0.06f, H("#FFF4D8"), true);   // lit cables
+                Ball(p, H("#FF3B3B"), new Vector3(t.x, t.h + 0.3f, tz), Vector3.one * 0.45f, default, true);                               // aviation light
             }
+            for (float x = -w / 2; x < w / 2; x += 2.4f)
+                Box(p, H("#FFE7B0"), new Vector3(x, deck + 0.35f, tz - 0.75f), new Vector3(0.5f, 0.14f, 0.05f), default, true);           // road lights along the deck
 
             // aquarium: north building with the titanium dome, south building with glass
             var aq = Node(p, "Aquarium", new Vector3(-46, 0, -6));
