@@ -11,7 +11,7 @@ namespace WeddingRun
     {
         // + score
         Heart, Ring, RedPacket, PineappleBun, GongCandy, BubbleTea, EbiFry, MisoKatsu, WeddingCookie,
-        Rose,
+        Rose, SweetTea,
         // power-up
         Shield,
         // - score
@@ -19,7 +19,7 @@ namespace WeddingRun
         // game over
         Cone, Barrier, GiftStack1, GiftStack2, GiftStack3, LiquorJar, BrickWall, Scooter, Suitcase, ChampagneTower,
         // game over unless you slide under
-        OverheadSign, OverheadBanner, OverheadFirecracker, OverheadNoren, OverheadGarland,
+        OverheadSign, OverheadBanner, OverheadFirecracker, OverheadNoren, OverheadGarland, OverheadBaxian,
         // special obstacles
         SumoPig                                    // Nagoya miso pig: charges at you — jump!
     }
@@ -57,6 +57,7 @@ namespace WeddingRun
             Add(new ItemDef { id = ModelId.MisoKatsu, nameEn = "Miso Katsu", nameJa = "味噌カツ", popupEn = "Miso Katsu", popupJa = "味噌カツ", kind = ItemKind.Good, nameZh = "味噌豬排", popup = "味噌豬排", points = 25, radius = 0.6f });
             Add(new ItemDef { id = ModelId.WeddingCookie, nameEn = "Wedding Pastry", nameJa = "喜餅", popupEn = "Wedding Pastry", popupJa = "喜餅", kind = ItemKind.Good, nameZh = "喜餅", popup = "喜餅", points = 30, radius = 0.6f });
             Add(new ItemDef { id = ModelId.Rose, nameEn = "Red Rose", nameJa = "赤いバラ", popupEn = "Romantic!", popupJa = "ロマンチック！", kind = ItemKind.Good, nameZh = "紅玫瑰", popup = "好浪漫!", points = 40, radius = 0.6f });
+            Add(new ItemDef { id = ModelId.SweetTea, nameEn = "Sweet Tea", nameJa = "甘いお茶", popupEn = "Sweet tea!", popupJa = "お茶をどうぞ！", kind = ItemKind.Good, nameZh = "甜茶", popup = "奉甜茶!", points = 25, radius = 0.6f });
             Add(new ItemDef { id = ModelId.Shield, nameEn = "Lucky Shield", nameJa = "「囍」シールド", popupEn = "Shield GET!", popupJa = "シールドGET！", kind = ItemKind.Shield, nameZh = "囍字護盾", popup = "護盾 GET!", points = 0, radius = 0.65f });
 
             // ---------- bad ----------
@@ -82,6 +83,7 @@ namespace WeddingRun
             Add(new ItemDef { id = ModelId.OverheadFirecracker, nameEn = "Firecrackers", nameJa = "爆竹", kind = ItemKind.Obstacle, nameZh = "鞭炮串", size = new Vector2(1.8f, 0), overhead = true });
             Add(new ItemDef { id = ModelId.OverheadNoren, nameEn = "Noren Curtain", nameJa = "のれん", kind = ItemKind.Obstacle, nameZh = "暖簾", size = new Vector2(2.0f, 0), overhead = true });
             Add(new ItemDef { id = ModelId.SumoPig, nameEn = "Miso Pig", nameJa = "味噌ブタ", kind = ItemKind.Obstacle, nameZh = "味噌豬", size = new Vector2(1.3f, 1.5f), charge = 7f });
+            Add(new ItemDef { id = ModelId.OverheadBaxian, nameEn = "Festive Banner", nameJa = "八仙彩", kind = ItemKind.Obstacle, nameZh = "八仙彩", size = new Vector2(2.0f, 0), overhead = true });
             Add(new ItemDef { id = ModelId.OverheadGarland, nameEn = "Wedding Garland", nameJa = "「囍」ガーランド", kind = ItemKind.Obstacle, nameZh = "囍字彩帶", size = new Vector2(2.1f, 0), overhead = true });
         }
 
@@ -182,7 +184,17 @@ namespace WeddingRun
                 petalA = C("#FFE6A8"), petalB = C("#FFB0C8"),
             },
             new StageDef {
-                index = 5, theme = 4, shortName = "婚禮", nameZh = "婚禮會場", nameEn = "WEDDING", nameJa = "結婚式場", shortEn = "Wedding", shortJa = "結婚式", length = 700,
+                // 文定: the engagement at the bride's family home in Kinmen (11 Oct 2026). First lap only.
+                index = 5, theme = 6, shortName = "文定", nameZh = "文定", nameEn = "ENGAGEMENT", nameJa = "婚約（文定）", shortEn = "Engagement", shortJa = "婚約", length = 420,
+                foods = new[] { ModelId.WeddingCookie, ModelId.SweetTea }, overhead = ModelId.OverheadBaxian,
+                obstacles = new[] { ModelId.GiftStack1, ModelId.GiftStack2, ModelId.GiftStack3, ModelId.LiquorJar },
+                skyTop = C("#7FC4EE"), skyBottom = C("#FFE9CF"), fog = C("#F6DCC4"), farGround = C("#5FAE6E"), midGround = C("#E8D3AE"),
+                road = C("#CBBFAC"), roadLine = C("#E5A93C"), curb = C("#9C5B45"),
+                light = C("#FFF2DC"), ambient = C("#C9B9A8"), lightIntensity = 1.15f,
+                petalA = C("#E5232E"), petalB = C("#F0B850"),
+            },
+            new StageDef {
+                index = 6, theme = 4, shortName = "婚禮", nameZh = "婚禮會場", nameEn = "WEDDING", nameJa = "結婚式場", shortEn = "Wedding", shortJa = "結婚式", length = 700,
                 foods = new[] { ModelId.WeddingCookie }, overhead = ModelId.OverheadGarland,
                 obstacles = new[] { ModelId.GiftStack1, ModelId.GiftStack2, ModelId.ChampagneTower, ModelId.Suitcase, ModelId.GiftStack3 },
                 skyTop = C("#2A1E55"), skyBottom = C("#FF9DB0"), fog = C("#C98AB0"), farGround = C("#5E9A6E"), midGround = C("#8CC08A"),
@@ -198,6 +210,9 @@ namespace WeddingRun
         public const int LoopStages = 4;
         /// <summary>Port of Nagoya: first lap only, and kept off the progress bar until the couple arrives.</summary>
         public const int PortStage = 4;
+        /// <summary>文定 (engagement): first lap only, revealed on arrival like the port.</summary>
+        public const int EngagementStage = 5;
+        public static bool HiddenUntilReached(int index) => index == PortStage || index == EngagementStage;
 
         static Stages()
         {
@@ -293,10 +308,12 @@ namespace WeddingRun
             float d = LocalDistance(distance);
             int i = IndexAt(distance);
             float local = Mathf.Clamp01((d - List[i].startDistance) / List[i].length);
-            if (LapAt(distance) > 0) return Mathf.Min(1f, (i + local) / LoopStages);        // 4 cities, then "next lap"
-            if (i >= PortStage) return Mathf.Min(1f, (i + local) / (List.Length - 1));       // the port has been revealed
-            // before the port the bar shows 5 nodes: Nagoya stops short of the venue so the marker never reaches it early
-            return (i + local * (i == PortStage - 1 ? 0.8f : 1f)) / PortStage;
+            if (LapAt(distance) > 0) return Mathf.Min(1f, (i + local) / LoopStages);   // 4 cities, then "next lap"
+            // first lap: the port and the engagement only appear on the bar once reached
+            int hidden = 0;
+            for (int k = i + 1; k < List.Length; k++) if (HiddenUntilReached(k)) hidden++;
+            bool nextHidden = i + 1 < List.Length && HiddenUntilReached(i + 1);   // stop short of the next visible node
+            return Mathf.Min(1f, (i + local * (nextHidden ? 0.8f : 1f)) / (List.Length - 1 - hidden));
         }
     }
 

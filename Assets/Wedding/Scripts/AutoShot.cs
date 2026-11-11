@@ -69,6 +69,16 @@ namespace WeddingRun
                     yield return new WaitForSecondsRealtime(0.25f);
                     Shot($"0{4 + s}d_kinmen_elders");
                 }
+                if (Stages.List[s].theme == 6)
+                {
+                    // the engagement (文定): she serves him sweet tea
+                    game.DebugJumpTo(WeddingGame.EngageAt - 47f);
+                    yield return new WaitForSecondsRealtime(1.6f); Shot("08e_engage_arrive");
+                    yield return new WaitForSecondsRealtime(3.4f); Shot("08f_engage_tea");
+                    yield return new WaitForSecondsRealtime(0.9f); Shot("08g_engage_drink");
+                    yield return new WaitForSecondsRealtime(1.0f); Shot("08h_engage_cheer");
+                    yield return new WaitForSecondsRealtime(2.6f);
+                }
                 if (Stages.List[s].theme == 5)
                 {
                     // the proposal (first lap)

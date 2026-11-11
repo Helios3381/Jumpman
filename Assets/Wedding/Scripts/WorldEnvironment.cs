@@ -121,7 +121,7 @@ namespace WeddingRun
 
         // ------------------------------------------------------------------ stage switching
 
-        /// <summary>Switch to a visual theme (0 HK, 1 Kinmen, 2 Taipei, 3 Nagoya, 4 Wedding).</summary>
+        /// <summary>Switch to a visual theme (0 HK, 1 Kinmen, 2 Taipei, 3 Nagoya, 4 Wedding, 5 Port of Nagoya, 6 Engagement in Kinmen).</summary>
         public void SetStage(int index, bool instant)
         {
             if (index == stage) return;
@@ -151,7 +151,7 @@ namespace WeddingRun
             }
 
             // nobody at the night-time port, and only Kinmen has elderly villagers: clear whoever is still off-screen ahead
-            if (index == 5 || index == KinmenTheme || previous == KinmenTheme)
+            if (index == 5 || InKinmen(index) != InKinmen(previous))
                 for (int i = walkers.Count - 1; i >= 0; i--)
                     if (walkers[i].x > 12f || instant) { Destroy(walkers[i].p.root.gameObject); walkers.RemoveAt(i); }
 
@@ -229,7 +229,8 @@ namespace WeddingRun
 
         // ------------------------------------------------------------------ passers-by
 
-        const int KinmenTheme = 1;
+        const int KinmenTheme = 1, EngagementTheme = 6;
+        static bool InKinmen(int theme) => theme == KinmenTheme || theme == EngagementTheme;
         class Walker { public ModelFactory.Person p; public float x, y, z, dir, pace, phase; public bool watcher; }
         readonly List<Walker> walkers = new List<Walker>();
         /// <summary>While true (the proposal), passers-by stop and watch the couple.</summary>
@@ -294,7 +295,7 @@ namespace WeddingRun
 
         void SpawnWalker(float speed)
         {
-            bool elder = stage == KinmenTheme;
+            bool elder = InKinmen(stage);
             // While the world scrolls, someone walking the same way as the couple drifts backwards on screen and looks
             // like they are moonwalking, so everyone comes towards the couple unless the world has stopped.
             var w = new Walker { dir = speed > 0.5f || Random.value < 0.5f ? -1f : 1f, pace = elder ? Random.Range(0.8f, 1.1f) : Random.Range(1.1f, 1.7f), phase = Random.value * 6f };
@@ -489,6 +490,7 @@ namespace WeddingRun
                 case 2: return FarTaipei;
                 case 3: return FarNagoya;
                 case 5: return FarNagoyaPort;
+                case 6: return FarKinmen;          // the engagement is at her family home in Kinmen
                 default: return FarWedding;
             }
         }
@@ -1244,6 +1246,7 @@ namespace WeddingRun
                 case 2: return MidTaipei;
                 case 3: return MidNagoya;
                 case 5: return MidNagoyaPort;
+                case 6: return MidEngagement;
                 default: return MidWedding;
             }
         }
@@ -1524,6 +1527,139 @@ namespace WeddingRun
                               KTile = H("#C9573B"), KTileDk = H("#A8432D"), KRidge = H("#9E3B28");
         static Mesh tileFlower;
 
+        // ------------------------------------------------------------------ 文定 (engagement) at her family home in Kinmen
+
+        /// <summary>
+        /// The bride's family home dressed for the 文定: the Minnan house with the 八仙彩 banner over the door, red 囍 on
+        /// the doors and lanterns, a red-clothed table of betrothal gifts in the courtyard, relatives waiting around it,
+        /// and strings of red lanterns across the courtyard.
+        /// </summary>
+        void MidEngagement(Transform p, System.Random r, float w)
+        {
+            FestiveHouse(Node(p, "FamilyHome", new Vector3(-24f, 0, 1.6f)), true);
+            BetrothalTable(Node(p, "GiftTable", new Vector3(-12.6f, 0, -0.6f)));
+            Relatives(p, r, -16.4f, -8.8f, 3100);
+            TileFlowerWall(p, -4.6f, 3.2f, 0.4f);
+            WindLionGod(Node(p, "WindLionGod", new Vector3(0.4f, 0, -1.5f)));
+            Casuarina(p, 3.4f, 0.6f);
+            FestiveHouse(Node(p, "FamilyHome", new Vector3(14f, 0, 1.6f)), false);
+            BetrothalTable(Node(p, "GiftTable", new Vector3(25.8f, 0, -0.6f)));
+            Relatives(p, r, 22f, 30f, 3300);
+            Banyan(p, 33.4f, 1.6f);
+            // strings of red lanterns across the courtyard
+            Box(p, H("#5A2A22"), new Vector3(0, 5.75f, -2.4f), new Vector3(w, 0.03f, 0.03f));
+            for (float x = -w / 2 + 0.9f; x < w / 2; x += 1.8f)
+            {
+                Cyl(p, Palette.Gold, new Vector3(x, 5.6f, -2.4f), 0.07f, 0.08f);
+                Ball(p, H("#E0303C"), new Vector3(x, 5.32f, -2.4f), new Vector3(0.42f, 0.5f, 0.42f), default, true);
+                Cyl(p, Palette.Gold, new Vector3(x, 5.04f, -2.4f), 0.07f, 0.06f);
+            }
+        }
+
+        /// <summary>Minnan house decorated for the engagement day.</summary>
+        static void FestiveHouse(Transform h, bool swallowTail)
+        {
+            MinnanHouse(h, swallowTail, null);
+            BaxianBanner(h, new Vector3(0, 3.3f, -1.8f), 5.6f, 0.5f);                       // 八仙彩 over the doorway
+            foreach (int sg in new[] { -1, 1 })
+            {
+                Box(h, H("#E5232E"), new Vector3(sg * 0.34f, 2.1f, -1.755f), new Vector3(0.36f, 0.36f, 0.01f), new Vector3(0, 0, 45), true);   // red paper diamonds
+                Text3D(h, "囍", Palette.Gold, new Vector3(sg * 0.34f, 2.1f, -1.77f), 2.4f);
+                Text3D(h, "囍", Palette.Gold, new Vector3(sg * 1.32f, 2.95f, -2.17f), 1.6f);    // on the lanterns
+                // red cloth rosettes over the stone windows
+                Ball(h, H("#D7263D"), new Vector3(sg * 2.65f, 2.85f, -1.8f), new Vector3(0.4f, 0.3f, 0.15f), default, true);
+            }
+        }
+
+        /// <summary>The betrothal gifts on a red-clothed table: 喜餅 boxes, gold jewellery, kaoliang, oranges, sweet tea and red candles.</summary>
+        static void BetrothalTable(Transform t)
+        {
+            Color red = H("#C8102E"), gold = Palette.Gold;
+            foreach (float x in new[] { -1.45f, 1.45f })
+                foreach (float z in new[] { -0.4f, 0.4f })
+                    Box(t, H("#5A2A22"), new Vector3(x, 0.42f, z), new Vector3(0.1f, 0.84f, 0.1f));
+            Box(t, red, new Vector3(0, 0.86f, 0), new Vector3(3.3f, 0.06f, 1.1f));
+            Box(t, red, new Vector3(0, 0.6f, -0.56f), new Vector3(3.3f, 0.52f, 0.02f));
+            Box(t, gold, new Vector3(0, 0.36f, -0.57f), new Vector3(3.3f, 0.05f, 0.01f), default, true);
+            Text3D(t, "囍", gold, new Vector3(0, 0.62f, -0.58f), 3.4f);
+            // 喜餅 boxes stacked
+            for (int i = 0; i < 4; i++)
+            {
+                Vector3 at = new Vector3(-1.05f + (i % 2) * 0.05f, 0.97f + i * 0.17f, 0.1f);
+                Box(t, H("#D7263D"), at, new Vector3(0.55f, 0.16f, 0.42f), new Vector3(0, i * 6f, 0));
+                Box(t, gold, at + new Vector3(0, 0, -0.215f), new Vector3(0.55f, 0.05f, 0.01f), new Vector3(0, i * 6f, 0), true);
+            }
+            // gold jewellery on a red tray (四點金)
+            Cyl(t, H("#9E1B22"), new Vector3(-0.35f, 0.92f, -0.15f), 0.26f, 0.04f);
+            Part(t, MeshKit.Torus(0.09f, 0.02f, 16, 5), gold, new Vector3(-0.45f, 0.96f, -0.15f), Vector3.one, new Vector3(90, 0, 0));
+            Part(t, MeshKit.Torus(0.09f, 0.02f, 16, 5), gold, new Vector3(-0.25f, 0.96f, -0.1f), Vector3.one, new Vector3(90, 0, 0));
+            Part(t, MeshKit.Torus(0.13f, 0.012f, 18, 4), gold, new Vector3(-0.35f, 0.95f, -0.3f), Vector3.one, new Vector3(90, 0, 0));
+            // sweet tea for the guests
+            Cyl(t, H("#B81D2C"), new Vector3(0.3f, 0.91f, -0.15f), 0.24f, 0.03f);
+            for (int i = 0; i < 3; i++)
+            {
+                var c = Node(t, "Cup", new Vector3(0.18f + i * 0.12f, 0.93f, -0.15f + (i % 2) * 0.08f));
+                c.localScale = Vector3.one * 1.3f;
+                TeaCup(c);
+            }
+            // two kaoliang bottles with red labels
+            foreach (float x in new[] { 0.78f, 0.98f })
+            {
+                Frus(t, H("#F4F2EE"), new Vector3(x, 0.89f, 0.25f), 0.09f, 0.09f, 0.3f, default, 10);
+                Frus(t, H("#F4F2EE"), new Vector3(x, 1.19f, 0.25f), 0.09f, 0.03f, 0.12f, default, 10);
+                Box(t, red, new Vector3(x, 1.04f, 0.155f), new Vector3(0.1f, 0.14f, 0.01f));
+            }
+            // oranges piled up
+            for (int i = 0; i < 6; i++) Ball(t, H("#FF9F1C"), new Vector3(1.15f + (i % 3) * 0.14f - (i / 3) * 0.07f, 0.95f + (i / 3) * 0.12f, -0.2f), Vector3.one * 0.13f);
+            // red candles at both ends
+            foreach (float x in new[] { -1.5f, 1.5f })
+            {
+                Cyl(t, H("#D7263D"), new Vector3(x, 1.12f, -0.3f), 0.05f, 0.45f);
+                Ball(t, H("#FFD23F"), new Vector3(x, 1.4f, -0.3f), new Vector3(0.07f, 0.12f, 0.07f), default, true);
+            }
+        }
+
+        /// <summary>Family and relatives waiting in the courtyard, facing the couple.</summary>
+        static void Relatives(Transform p, System.Random r, float x0, float x1, int seed)
+        {
+            int n = 0;
+            for (float x = x0; x < x1; x += Rf(r, 1.3f, 1.9f), n++)
+            {
+                if (Mathf.Abs(x - (x0 + x1) / 2) < 1.9f && n % 2 == 0) continue;   // room for the gift table
+                var pr = ModelFactory.BuildPerson(p, seed + n * 17, false, n % 3 != 1);
+                pr.root.localPosition = new Vector3(x, 0, Rf(r, 0.3f, 1.0f));
+                pr.root.localEulerAngles = new Vector3(0, 90f + Rf(r, -25f, 25f), 0);
+                pr.armL.localEulerAngles = new Vector3(0, 0, n % 2 == 0 ? 40f : 0f);
+                pr.armR.localEulerAngles = new Vector3(0, 0, n % 2 == 0 ? 40f : 15f);
+            }
+        }
+
+        void FrontEngagement(Transform p, System.Random r, float w)
+        {
+            PavingLines(p, w, H("#A99B86"));
+            for (float x = -w / 2; x < w / 2; x += 6f)
+            {
+                // low red-brick wall on a granite base
+                Box(p, KGranite, new Vector3(x + 1.5f, 0.18f, 0.2f), new Vector3(3f, 0.3f, 0.5f));
+                Box(p, KBrick, new Vector3(x + 1.5f, 0.48f, 0.2f), new Vector3(3f, 0.32f, 0.44f));
+                Box(p, KTileDk, new Vector3(x + 1.5f, 0.68f, 0.2f), new Vector3(3.1f, 0.08f, 0.56f));
+                // potted kumquat tree (年桔) for luck
+                float kx = x + 4.4f, kz = -1.0f;
+                Frus(p, H("#B23A33"), new Vector3(kx, 0, kz), 0.28f, 0.36f, 0.42f, default, 12);
+                Cyl(p, Palette.Gold, new Vector3(kx, 0.3f, kz), 0.33f, 0.05f);
+                Ball(p, H("#3F8F55"), new Vector3(kx, 0.92f, kz), new Vector3(0.95f, 0.85f, 0.9f));
+                for (int i = 0; i < 9; i++)
+                {
+                    float a = i * 40f * Mathf.Deg2Rad, y = 0.75f + (i % 3) * 0.16f;
+                    Ball(p, H("#FF9F1C"), new Vector3(kx + Mathf.Cos(a) * 0.42f, y, kz + Mathf.Sin(a) * 0.35f - 0.1f), Vector3.one * 0.11f);
+                }
+                Box(p, H("#E5232E"), new Vector3(kx + 0.25f, 0.85f, kz - 0.45f), new Vector3(0.12f, 0.2f, 0.01f), default, true);   // red envelope
+                // red firecracker paper scattered on the ground
+                for (int i = 0; i < 6; i++)
+                    Box(p, i % 2 == 0 ? H("#E5232E") : H("#C8102E"), new Vector3(x + Rf(r, 0, 6), 0.02f, Rf(r, -1.6f, -0.3f)), new Vector3(0.12f, 0.01f, 0.06f), new Vector3(0, Rf(r, 0, 180), 0), true);
+            }
+        }
+
         /// <summary>Minnan house (閩南古厝): granite base, red-brick walls, recessed entrance with door gods and family plaque, stone windows, side wings.</summary>
         static void MinnanHouse(Transform h, bool swallowTail, string plaque)
         {
@@ -1558,8 +1694,11 @@ namespace WeddingRun
                 Ball(h, H("#E0303C"), new Vector3(sg * 1.32f, 2.95f, -1.98f), new Vector3(0.34f, 0.42f, 0.34f), default, true);
                 Cyl(h, Palette.Gold, new Vector3(sg * 1.32f, 3.19f, -1.98f), 0.08f, 0.06f);
             }
-            Box(h, H("#2A1E1A"), new Vector3(0, 3.36f, -1.74f), new Vector3(1.9f, 0.46f, 0.03f));
-            Text3D(h, plaque, Palette.Gold, new Vector3(0, 3.36f, -1.77f), 2.2f);
+            if (!string.IsNullOrEmpty(plaque))
+            {
+                Box(h, H("#2A1E1A"), new Vector3(0, 3.36f, -1.74f), new Vector3(1.9f, 0.46f, 0.03f));
+                Text3D(h, plaque, Palette.Gold, new Vector3(0, 3.36f, -1.77f), 2.2f);
+            }
             // roof: red tiles in rows, main ridge with cut-porcelain decoration and swallow-tail or horseback ends
             TiledRoof(h, new Vector3(0, 3.6f, 0), 8.2f, 1.6f, 4.0f, 0.36f);
             Box(h, KRidge, new Vector3(0, 5.3f, 0), new Vector3(6.6f, 0.3f, 0.36f));
@@ -1960,6 +2099,7 @@ namespace WeddingRun
                 case 2: return FrontTaipei;
                 case 3: return FrontNagoya;
                 case 5: return FrontNagoyaPort;
+                case 6: return FrontEngagement;
                 default: return FrontWedding;
             }
         }

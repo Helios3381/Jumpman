@@ -145,6 +145,7 @@ namespace WeddingRun
             runner.DoubleJumped += () => { PlaySfx(SfxBank.Whoosh, 0.9f); PlaySfx(jumpSound, 0.4f, 1.25f); };
             runner.Kissed += OnKiss;
             runner.ProposalAccepted += OnProposalAccepted;
+            runner.TeaServed += OnTeaServed;
             runner.Landed += () => env.Burst(new Vector3(CoupleRunner.GroomX, 0.1f, 0), new Color(1, 1, 1, 0.8f), 5, 0.4f);
             runner.state = CoupleRunner.State.Run;
 
@@ -300,6 +301,8 @@ namespace WeddingRun
             celebrated = false;
             proposed = false;
             if (proposeCo != null) { StopCoroutine(proposeCo); proposeCo = null; }
+            engaged = false;
+            if (engageCo != null) { StopCoroutine(engageCo); engageCo = null; }
             distance = debugStartDistance; itemScore = 0; plus = 0; minus = 0; combo = 0; maxCombo = 0;
             comboTimer = 0; invulnerable = 0; recordAnnounced = false; hitBy = null;
             nextPatternIn = 16f;
@@ -310,6 +313,7 @@ namespace WeddingRun
             env.Spectate = false;
             runner.ResetRunner(lap > 0 || stage >= 1);   // Hong Kong: he runs alone
             if (lap > 0 || Stages.List[stage].theme == 4) runner.SetFormal(true, false);
+            else if (Stages.List[stage].theme == 6) runner.SetOutfit(ModelFactory.Outfit.Engagement, false);
             runner.state = CoupleRunner.State.Run;
             speed = TitleSpeed;
             ui.SetCombo(0, 1);
@@ -386,6 +390,7 @@ namespace WeddingRun
                     UpdateStage();
                     UpdateSpawning(dt);
                     if (lap == 0 && !proposed && distance >= ProposeAt) proposeCo = StartCoroutine(Proposal());
+                    else if (lap == 0 && !engaged && distance >= EngageAt) engageCo = StartCoroutine(Engagement());
                     else if (lap == 0 && !celebrated && distance >= CelebrateAt) celebrateCo = StartCoroutine(WeddingFinale());
                     break;
                 case State.Celebrating:
@@ -503,6 +508,14 @@ namespace WeddingRun
                 PlaySfx(SfxBank.Join, 0.8f);
                 StartCoroutine(JoinHearts());
             }
+            if (def.theme == 6 && runner.CurrentOutfit == ModelFactory.Outfit.Casual)
+            {
+                // arriving at her family home in Kinmen for the 文定: a red qipao for her, a suit for him
+                runner.SetOutfit(ModelFactory.Outfit.Engagement, true);
+                PlaySfx(SfxBank.Join, 0.8f);
+                env.Burst(new Vector3(CoupleRunner.GroomX, 1f, 0), Palette.Gold, 40, 1.2f);
+                env.Burst(runner.BridePosition + Vector3.up, new Color(0.9f, 0.12f, 0.18f), 40, 1.2f);
+            }
             if (def.theme == 4)
             {
                 HasReachedWedding = true;
@@ -581,6 +594,62 @@ namespace WeddingRun
             nextPatternIn = 24f;
             state = State.Playing;
             proposeCo = null;
+        }
+
+        // ------------------------------------------------------------------ engagement (文定, first lap)
+
+        public static float EngageAt => Stages.StartOf(0, Stages.EngagementStage) + Stages.List[Stages.EngagementStage].length - 40f;
+        bool engaged;
+        Coroutine engageCo;
+
+        /// <summary>文定 at her family home in Kinmen: they stop, she serves him sweet tea, red-and-gold firecrackers, then on to the wedding.</summary>
+        IEnumerator Engagement()
+        {
+            state = State.Celebrating;
+            engaged = true;
+            foreach (var h in hazards)
+                if (!h.done && h.t && h.x > CoupleRunner.GroomX - 1f)
+                {
+                    env.Burst(new Vector3(h.x, h.y + 0.5f, 0), Palette.Gold, 12, 0.8f);
+                    Destroy(h.t.gameObject);
+                    h.done = true;
+                }
+            while (speed > 0.05f)
+            {
+                speed = Mathf.MoveTowards(speed, 0, Time.deltaTime * 15f);
+                yield return null;
+            }
+            speed = 0;
+            runner.BeginEngage();
+            yield return new WaitForSeconds(4.4f);
+            runner.EndEngage();
+            nextPatternIn = 24f;
+            state = State.Playing;
+            engageCo = null;
+        }
+
+        void OnTeaServed()
+        {
+            PlaySfx(SfxBank.Chime, 0.9f);
+            PlaySfx(SfxBank.Applause, 0.7f);
+            var at = new Vector3(CoupleRunner.GroomX - 0.5f, 2.0f, -0.2f);
+            env.Burst(at, Palette.Gold, 36, 1.0f);
+            env.Burst(at, new Color(0.9f, 0.12f, 0.18f), 36, 1.2f);
+            env.Confetti(new Vector3(CoupleRunner.GroomX - 0.5f, 2.5f, 0.5f));
+            ui.Toast(Loc.T("文定之喜！", "Happy engagement!", "婚約おめでとう！"));
+            StartCoroutine(Firecrackers());
+        }
+
+        /// <summary>Strings of firecrackers popping red and gold beside the courtyard.</summary>
+        IEnumerator Firecrackers()
+        {
+            for (int i = 0; i < 12; i++)
+            {
+                var at = new Vector3(CoupleRunner.GroomX + Random.Range(1.5f, 5f), Random.Range(0.3f, 2f), Random.Range(-0.5f, 1f));
+                env.Burst(at, i % 2 == 0 ? new Color(0.9f, 0.12f, 0.18f) : Palette.Gold, 12, 0.5f);
+                PlaySfx(SfxBank.Bump, 0.3f, Random.Range(1.6f, 2.2f));
+                yield return new WaitForSeconds(Random.Range(0.06f, 0.14f));
+            }
         }
 
         void OnProposalAccepted()
@@ -732,6 +801,7 @@ namespace WeddingRun
             if (nextPatternIn > 0) return;
             if (lap == 0 && !celebrated && distance > CelebrateAt - 75f) return;   // keep the road clear for the finale
             if (lap == 0 && !proposed && distance > ProposeAt - 75f && distance < ProposeAt + 5f) return;   // and for the proposal
+            if (lap == 0 && !engaged && distance > EngageAt - 75f && distance < EngageAt + 5f) return;     // and for the engagement
             var diff = Stages.DifficultyAt(distance);
             float length = SpawnPattern(Stages.List[stage], diff);
             float safeGap = speed * 0.6f + 2.5f;   // time to land / stand up and react again

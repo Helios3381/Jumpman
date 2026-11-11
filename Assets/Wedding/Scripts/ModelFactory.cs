@@ -256,6 +256,23 @@ namespace WeddingRun
                     }
                     break;
 
+                case ModelId.SweetTea:
+                    {
+                        // sweet tea (甜茶) served at the engagement: two little cups on a red lacquer tray with red dates
+                        var t = Node(r, "Tray", new Vector3(0, -0.12f, 0), new Vector3(-30, 0, 0));
+                        Cyl(t, H("#B81D2C"), Vector3.zero, 0.42f, 0.06f);
+                        Part(t, MeshKit.Torus(0.42f, 0.03f, 24, 5), Palette.Gold, new Vector3(0, 0.03f, 0), Vector3.one, new Vector3(90, 0, 0));
+                        foreach (int sg in new[] { -1, 1 })
+                        {
+                            var c = Node(t, "Cup", new Vector3(sg * 0.17f, 0.03f, 0.02f));
+                            c.localScale = Vector3.one * 2.4f;
+                            TeaCup(c);
+                        }
+                        for (int i = 0; i < 3; i++) Ball(t, H("#9E1B22"), new Vector3(-0.05f + i * 0.06f, 0.06f, -0.22f), new Vector3(0.07f, 0.05f, 0.05f));
+                        for (int i = 0; i < 2; i++) Part(r, MeshKit.Capsule, new Color(1, 1, 1, 0.6f), new Vector3(-0.17f + i * 0.34f, 0.35f, -0.1f), new Vector3(0.05f, 0.1f, 0.05f), new Vector3(0, 0, i == 0 ? 15 : -15), true);
+                    }
+                    break;
+
                 case ModelId.Shield:
                     {
                         // A real shield silhouette: gold rim, red face, white 囍, plus a soft glow and sparkles
@@ -503,6 +520,14 @@ namespace WeddingRun
                     }
                     break;
 
+                case ModelId.OverheadBaxian:
+                    {
+                        var g = Gantry(r, 2.0f, H("#7A2E22"));
+                        BaxianBanner(g, new Vector3(0, 1.7f, 0), 2.0f, 0.78f);
+                        Hangers(g, 2.0f, 2.1f, H("#7A2E22"));
+                    }
+                    break;
+
                 case ModelId.OverheadGarland:
                     {
                         var g = Gantry(r, 2.1f, white);
@@ -521,6 +546,34 @@ namespace WeddingRun
         }
 
         /// <summary>Two posts behind the lane and a beam reaching over it (overhead obstacles hang from it).</summary>
+        /// <summary>
+        /// 八仙彩: the long red embroidered banner hung over Minnan doorways for weddings and engagements — the Eight
+        /// Immortals in colourful silk under a gold band, with a gold fringe.
+        /// </summary>
+        public static void BaxianBanner(Transform p, Vector3 c, float width, float height)
+        {
+            Box(p, H("#C8102E"), c, new Vector3(width, height, 0.04f));
+            Box(p, Palette.Gold, c + new Vector3(0, height * 0.4f, -0.025f), new Vector3(width, height * 0.1f, 0.01f), default, true);
+            Color[] silk = { H("#2E8B57"), H("#3D7DFF"), H("#F2C14E"), H("#FF8FB1"), H("#7E5BC2"), H("#FF7A3D"), H("#1FA3A3"), H("#F4F1EA") };
+            float step = width / silk.Length;
+            for (int i = 0; i < silk.Length; i++)
+            {
+                float x = c.x - width / 2 + step * (i + 0.5f);
+                Ball(p, silk[i], new Vector3(x, c.y - height * 0.08f, c.z - 0.03f), new Vector3(step * 0.5f, height * 0.5f, 0.02f), default, true);   // robe
+                Ball(p, H("#FFE0C2"), new Vector3(x, c.y + height * 0.2f, c.z - 0.035f), new Vector3(step * 0.24f, step * 0.24f, 0.02f), default, true);  // face
+            }
+            for (float x = c.x - width / 2 + 0.06f; x < c.x + width / 2; x += 0.12f)
+                Box(p, Palette.Gold, new Vector3(x, c.y - height / 2 - 0.08f, c.z - 0.02f), new Vector3(0.03f, 0.16f, 0.01f), default, true);
+        }
+
+        /// <summary>A small tea cup (≈0.12 wide) with tea in it.</summary>
+        public static void TeaCup(Transform c)
+        {
+            Frus(c, Color.white, Vector3.zero, 0.04f, 0.055f, 0.065f, default, 12);
+            Cyl(c, H("#C98A3E"), new Vector3(0, 0.06f, 0), 0.05f, 0.006f);
+            Frus(c, H("#D7263D"), new Vector3(0, 0.02f, 0), 0.046f, 0.05f, 0.012f, default, 12);
+        }
+
         static Transform Gantry(Transform r, float width, Color c)
         {
             var g = Node(r, "Gantry", Vector3.zero);
@@ -599,14 +652,18 @@ namespace WeddingRun
         }
 
         /// <summary>Groom: casual clothes (formal=false) or tuxedo (formal=true).</summary>
-        public static Rig BuildGroom(Transform parent, bool formal)
+        public enum Outfit { Casual, Wedding, Engagement }
+
+        /// <summary>Groom: casual clothes, tuxedo (formal) or, for the engagement, 長袍馬褂 (a black mandarin jacket over a long navy gown).</summary>
+        public static Rig BuildGroom(Transform parent, bool formal, bool engagement = false)
         {
+            if (engagement) formal = true;
             var rig = new Rig();
-            Color top = formal ? H("#262636") : H("#7FB8F0");      // tux / t-shirt
-            Color pants = formal ? H("#262636") : H("#3E5C8A");    // tux / jeans
+            Color top = engagement ? H("#1F1D2B") : formal ? H("#262636") : H("#7FB8F0");      // 馬褂 / tux / t-shirt
+            Color pants = engagement ? H("#2A3E6B") : formal ? H("#262636") : H("#3E5C8A");    // 長袍 / tux / jeans
             Color shoe = formal ? H("#15131A") : Color.white;
             Color shirt = Color.white, hair = H("#1E1A22");
-            rig.root = Node(parent, formal ? "Groom_Formal" : "Groom_Casual", Vector3.zero);
+            rig.root = Node(parent, engagement ? "Groom_Engagement" : formal ? "Groom_Formal" : "Groom_Casual", Vector3.zero);
             var facing = Node(rig.root, "Facing", Vector3.zero, new Vector3(0, 28, 0));
             rig.body = Node(facing, "Body", Vector3.zero);
 
@@ -622,12 +679,26 @@ namespace WeddingRun
             if (formal)
             {
                 Box(torso, top, new Vector3(0.0f, 0.02f, 0), new Vector3(0.44f, 0.12f, 0.52f)); // jacket hem
-                Part(torso, MeshKit.Prism(), shirt, new Vector3(0.212f, 0.36f, 0), new Vector3(0.02f, 0.5f, 0.2f), new Vector3(180, 0, 0));
-                Box(torso, shirt, new Vector3(0.211f, 0.48f, 0), new Vector3(0.02f, 0.2f, 0.18f));
-                Box(torso, black(), new Vector3(0.225f, 0.53f, -0.05f), new Vector3(0.04f, 0.08f, 0.1f), new Vector3(30, 0, 0));
-                Box(torso, black(), new Vector3(0.225f, 0.53f, 0.05f), new Vector3(0.04f, 0.08f, 0.1f), new Vector3(-30, 0, 0));
-                Ball(torso, H("#E8364F"), new Vector3(0.18f, 0.45f, -0.25f), Vector3.one * 0.11f);   // boutonniere
-                Ball(torso, H("#4CAF6E"), new Vector3(0.16f, 0.4f, -0.26f), new Vector3(0.06f, 0.1f, 0.04f));
+                if (engagement)
+                {
+                    // 長袍馬褂: black mandarin jacket with a stand collar and gold knot buttons (盤扣) over a long navy gown
+                    Cyl(torso, top, new Vector3(0, 0.62f, 0), 0.12f, 0.08f);
+                    Part(torso, MeshKit.Torus(0.12f, 0.012f, 14, 4), Palette.Gold, new Vector3(0, 0.66f, 0), Vector3.one, new Vector3(90, 0, 0), true);
+                    Box(torso, H("#34314A"), new Vector3(0.212f, 0.32f, 0), new Vector3(0.01f, 0.58f, 0.025f));
+                    for (int k = 0; k < 5; k++)
+                        Ball(torso, Palette.Gold, new Vector3(0.222f, 0.08f + k * 0.12f, 0), new Vector3(0.03f, 0.03f, 0.08f), default, true);
+                    rig.skirt = Node(rig.body, "Gown", new Vector3(0, 0.74f, 0));
+                    Frus(rig.skirt, pants, new Vector3(0, -0.62f, 0), 0.29f, 0.24f, 0.66f, default, 14);
+                }
+                else
+                {
+                    Part(torso, MeshKit.Prism(), shirt, new Vector3(0.212f, 0.36f, 0), new Vector3(0.02f, 0.5f, 0.2f), new Vector3(180, 0, 0));
+                    Box(torso, shirt, new Vector3(0.211f, 0.48f, 0), new Vector3(0.02f, 0.2f, 0.18f));
+                    Box(torso, black(), new Vector3(0.225f, 0.53f, -0.05f), new Vector3(0.04f, 0.08f, 0.1f), new Vector3(30, 0, 0));
+                    Box(torso, black(), new Vector3(0.225f, 0.53f, 0.05f), new Vector3(0.04f, 0.08f, 0.1f), new Vector3(-30, 0, 0));
+                    Ball(torso, H("#E8364F"), new Vector3(0.18f, 0.45f, -0.25f), Vector3.one * 0.11f);   // boutonniere
+                    Ball(torso, H("#4CAF6E"), new Vector3(0.16f, 0.4f, -0.26f), new Vector3(0.06f, 0.1f, 0.04f));
+                }
             }
             else
             {
@@ -643,7 +714,10 @@ namespace WeddingRun
             foreach (var arm in new[] { rig.armL, rig.armR })
             {
                 if (formal)
-                    Part(arm, MeshKit.Capsule, sleeve, new Vector3(0, -0.24f, 0), new Vector3(0.16f, 0.26f, 0.16f));
+                {
+                    Part(arm, MeshKit.Capsule, sleeve, new Vector3(0, -0.24f, 0), new Vector3(engagement ? 0.18f : 0.16f, 0.26f, engagement ? 0.18f : 0.16f));
+                    if (engagement) Cyl(arm, pants, new Vector3(0, -0.45f, 0), 0.085f, 0.07f);   // the gown's cuff showing below the jacket sleeve
+                }
                 else
                 {
                     Part(arm, MeshKit.Capsule, Skin, new Vector3(0, -0.26f, 0), new Vector3(0.14f, 0.24f, 0.14f));
@@ -770,11 +844,13 @@ namespace WeddingRun
         }
 
         /// <summary>Bride: casual clothes (formal=false) or wedding dress (formal=true).</summary>
-        public static Rig BuildBride(Transform parent, bool formal)
+        /// <summary>Bride: casual clothes, wedding dress (formal) or, for the engagement, a red qipao (旗袍) with gold trim.</summary>
+        public static Rig BuildBride(Transform parent, bool formal, bool engagement = false)
         {
+            if (engagement) formal = false;
             var rig = new Rig { isBride = true };
-            Color hair = H("#3A2622");
-            rig.root = Node(parent, formal ? "Bride_Formal" : "Bride_Casual", Vector3.zero);
+            Color hair = H("#3A2622"), qipao = H("#C8102E"), trim = H("#F2C14E");
+            rig.root = Node(parent, engagement ? "Bride_Engagement" : formal ? "Bride_Formal" : "Bride_Casual", Vector3.zero);
             var facing = Node(rig.root, "Facing", Vector3.zero, new Vector3(0, 28, 0));
             rig.body = Node(facing, "Body", Vector3.zero);
 
@@ -784,7 +860,7 @@ namespace WeddingRun
             foreach (var leg in new[] { rig.legL, rig.legR })
             {
                 if (!formal) Part(leg, MeshKit.Capsule, Skin, new Vector3(0, -0.36f, 0), new Vector3(0.14f, 0.34f, 0.14f));
-                Box(leg, formal ? H("#F5E6EE") : Color.white, new Vector3(0.08f, -0.7f, 0), new Vector3(0.24f, 0.09f, 0.14f));
+                Box(leg, formal ? H("#F5E6EE") : engagement ? qipao : Color.white, new Vector3(0.08f, -0.7f, 0), new Vector3(0.24f, 0.09f, 0.14f));
             }
 
             Color dressTop;
@@ -797,6 +873,14 @@ namespace WeddingRun
                 Frus(rig.skirt, lace, new Vector3(0, -0.8f, 0), 0.62f, 0.56f, 0.1f, default, 16);
                 Part(rig.skirt, MeshKit.Torus(0.22f, 0.045f, 16, 6), H("#F7A8C4"), new Vector3(0, 0.0f, 0), Vector3.one, new Vector3(90, 0, 0));
             }
+            else if (engagement)
+            {
+                // knee-length qipao: fitted, gold hem band, side slit
+                dressTop = qipao;
+                Frus(rig.skirt, qipao, new Vector3(0, -0.6f, 0), 0.25f, 0.22f, 0.62f, default, 14);
+                Frus(rig.skirt, trim, new Vector3(0, -0.6f, 0), 0.255f, 0.252f, 0.05f, default, 14);
+                Box(rig.skirt, H("#7A0A1A"), new Vector3(0.16f, -0.48f, -0.18f), new Vector3(0.02f, 0.24f, 0.02f), new Vector3(0, -40, 0));
+            }
             else
             {
                 // yellow pleated mini skirt + pink cardigan
@@ -805,8 +889,16 @@ namespace WeddingRun
             }
 
             var torso = Node(rig.body, "Torso", new Vector3(0, 0.84f, 0));
-            Frus(torso, dressTop, Vector3.zero, formal ? 0.2f : 0.22f, formal ? 0.24f : 0.25f, 0.42f, default, 14);
-            if (formal)
+            Frus(torso, dressTop, Vector3.zero, formal ? 0.2f : engagement ? 0.21f : 0.22f, formal ? 0.24f : engagement ? 0.23f : 0.25f, 0.42f, default, 14);
+            if (engagement)
+            {
+                // mandarin collar, diagonal gold-trimmed opening with knot buttons (盤扣)
+                Cyl(torso, qipao, new Vector3(0, 0.45f, 0), 0.1f, 0.09f);
+                Part(torso, MeshKit.Torus(0.1f, 0.012f, 14, 4), trim, new Vector3(0, 0.49f, 0), Vector3.one, new Vector3(90, 0, 0), true);
+                Box(torso, trim, new Vector3(0.222f, 0.33f, -0.06f), new Vector3(0.015f, 0.2f, 0.025f), new Vector3(-35, 0, 0), true);
+                for (int k = 0; k < 3; k++) Ball(torso, trim, new Vector3(0.232f, 0.24f + k * 0.07f, -0.11f + k * 0.04f), Vector3.one * 0.035f, default, true);
+            }
+            else if (formal)
             {
                 Box(torso, Skin, new Vector3(0, 0.45f, 0), new Vector3(0.22f, 0.1f, 0.34f));
                 Ball(torso, Skin, new Vector3(0, 0.42f, 0), new Vector3(0.36f, 0.12f, 0.46f));
@@ -822,13 +914,19 @@ namespace WeddingRun
             foreach (var arm in new[] { rig.armL, rig.armR })
             {
                 if (formal) Part(arm, MeshKit.Capsule, Skin, new Vector3(0, -0.22f, 0), new Vector3(0.12f, 0.24f, 0.12f));
+                else if (engagement)
+                {
+                    Part(arm, MeshKit.Capsule, Skin, new Vector3(0, -0.24f, 0), new Vector3(0.12f, 0.22f, 0.12f));
+                    Part(arm, MeshKit.Capsule, qipao, new Vector3(0, -0.07f, 0), new Vector3(0.15f, 0.1f, 0.15f));   // cap sleeve
+                    Part(arm, MeshKit.Torus(0.055f, 0.014f, 12, 4), Palette.Gold, new Vector3(0, -0.4f, 0), Vector3.one, new Vector3(90, 0, 0));   // gold bangle
+                }
                 else
                 {
                     Part(arm, MeshKit.Capsule, dressTop, new Vector3(0, -0.2f, 0), new Vector3(0.14f, 0.23f, 0.14f)); // cardigan sleeve
                     Ball(arm, Skin, new Vector3(0, -0.44f, 0), Vector3.one * 0.12f);
                 }
             }
-            rig.bouquet = Node(rig.armL, formal ? "Bouquet" : "BubbleTea", new Vector3(0.05f, -0.46f, 0));
+            rig.bouquet = Node(rig.armL, formal ? "Bouquet" : engagement ? "Fan" : "BubbleTea", new Vector3(0.05f, -0.46f, 0));
             if (formal)
             {
                 // a proper bridal bouquet: roses in a dome, leaves, ribbon and stems
@@ -851,6 +949,14 @@ namespace WeddingRun
                 Box(rig.bouquet, Color.white, new Vector3(-0.03f, -0.2f, -0.07f), new Vector3(0.04f, 0.16f, 0.02f), new Vector3(0, 0, -15));
                 rig.bouquet.localScale = Vector3.one * 1.25f;
             }
+            else if (engagement)
+            {
+                // a round silk fan (團扇) with 囍
+                Cyl(rig.bouquet, H("#8A5A2B"), new Vector3(0, 0.05f, 0), 0.012f, 0.16f);
+                Cyl(rig.bouquet, qipao, new Vector3(0, 0.24f, 0), 0.13f, 0.01f, new Vector3(90, 0, 0));
+                Part(rig.bouquet, MeshKit.Torus(0.13f, 0.012f, 18, 4), trim, new Vector3(0, 0.24f, 0), Vector3.one, default, true);
+                Text3D(rig.bouquet, "囍", trim, new Vector3(0, 0.24f, -0.012f), 1.5f);
+            }
             else
             {
                 // she carries a bubble tea
@@ -868,13 +974,21 @@ namespace WeddingRun
             Face(face, hr, hair, true);
             Ball(rig.head, hair, new Vector3(-0.05f, hr + 0.1f, 0), new Vector3(0.7f, 0.52f, 0.7f));
             Ball(rig.head, hair, new Vector3(0.14f, hr + 0.2f, -0.06f), new Vector3(0.34f, 0.16f, 0.5f), new Vector3(0, 0, -25));
-            if (formal)
+            if (formal || engagement)
             {
                 Ball(rig.head, hair, new Vector3(-0.15f, hr - 0.08f, 0), new Vector3(0.48f, 0.56f, 0.66f));
                 Ball(rig.head, hair, new Vector3(-0.28f, hr + 0.2f, 0), Vector3.one * 0.3f);                  // bun
-                Part(rig.head, MeshKit.Torus(0.17f, 0.03f, 16, 5, 180f), Palette.Gold, new Vector3(0.02f, hr + 0.3f, 0), Vector3.one, new Vector3(0, 90, 0));
-                Ball(rig.head, H("#BFF3FF"), new Vector3(0.02f, hr + 0.47f, 0), Vector3.one * 0.07f, default, true);
-                Ball(rig.head, H("#FF8FB1"), new Vector3(-0.2f, hr + 0.28f, -0.22f), Vector3.one * 0.1f);   // hair flower
+                if (formal)
+                {
+                    Part(rig.head, MeshKit.Torus(0.17f, 0.03f, 16, 5, 180f), Palette.Gold, new Vector3(0.02f, hr + 0.3f, 0), Vector3.one, new Vector3(0, 90, 0));
+                    Ball(rig.head, H("#BFF3FF"), new Vector3(0.02f, hr + 0.47f, 0), Vector3.one * 0.07f, default, true);
+                    Ball(rig.head, H("#FF8FB1"), new Vector3(-0.2f, hr + 0.28f, -0.22f), Vector3.one * 0.1f);   // hair flower
+                }
+                else
+                {
+                    Ball(rig.head, H("#E5232E"), new Vector3(-0.22f, hr + 0.3f, -0.2f), Vector3.one * 0.13f);   // red flower
+                    Box(rig.head, Palette.Gold, new Vector3(-0.3f, hr + 0.26f, 0.08f), new Vector3(0.03f, 0.03f, 0.26f), new Vector3(20, 0, 0), true);   // gold hairpin
+                }
             }
             else
             {

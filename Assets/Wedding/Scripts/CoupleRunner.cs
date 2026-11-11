@@ -32,7 +32,7 @@ namespace WeddingRun
 
         /// <summary>Dead = bumped into something: the groom sits down dizzy, the bride comes over (no "death").</summary>
         /// <summary>Celebrate = wedding finale: they stop, hug and kiss.</summary>
-        public enum State { Idle, Run, Dead, Celebrate, Propose }
+        public enum State { Idle, Run, Dead, Celebrate, Propose, Engage }
         public State state = State.Idle;
 
         public float Y { get; private set; }
@@ -42,7 +42,7 @@ namespace WeddingRun
         public bool HasShield { get; private set; }
         public bool BrideVisible { get; private set; } = true;
 
-        public event Action Jumped, DoubleJumped, Landed, SlideStarted, Kissed, ProposalAccepted;
+        public event Action Jumped, DoubleJumped, Landed, SlideStarted, Kissed, ProposalAccepted, TeaServed;
 
         float proposeTimer;
         bool accepted;
@@ -56,6 +56,26 @@ namespace WeddingRun
             proposeTimer = 0; accepted = false;
             Sliding = false; slideQueued = false; buffer = 0;
             Y = 0; VY = 0; Grounded = true;
+        }
+
+        float engageTimer;
+        bool served;
+        Transform teaTray, teaCupOnTray, teaCup;
+
+        /// <summary>文定: she serves him sweet tea with both hands, he bows and drinks, everyone cheers.</summary>
+        public void BeginEngage()
+        {
+            state = State.Engage;
+            engageTimer = 0; served = false;
+            Sliding = false; slideQueued = false; buffer = 0;
+            Y = 0; VY = 0; Grounded = true;
+        }
+
+        public void EndEngage()
+        {
+            state = State.Run;
+            teaTray.gameObject.SetActive(false);
+            teaCup.gameObject.SetActive(false);
         }
 
         public void EndPropose()
@@ -85,16 +105,20 @@ namespace WeddingRun
         }
 
         ModelFactory.Rig groom, bride;
-        ModelFactory.Rig[] groomRigs, brideRigs;   // [0] casual, [1] wedding attire
+        ModelFactory.Rig[] groomRigs, brideRigs;   // indexed by ModelFactory.Outfit: casual, wedding attire, engagement
         Transform groomHolder, brideHolder;
         public bool Formal { get; private set; }
+        public ModelFactory.Outfit CurrentOutfit { get; private set; }
 
         /// <summary>Casual clothes for the journey; wedding attire from the wedding venue on.</summary>
-        public void SetFormal(bool formal, bool animate)
+        public void SetFormal(bool formal, bool animate) => SetOutfit(formal ? ModelFactory.Outfit.Wedding : ModelFactory.Outfit.Casual, animate);
+
+        public void SetOutfit(ModelFactory.Outfit outfit, bool animate)
         {
-            Formal = formal;
-            int i = formal ? 1 : 0;
-            for (int k = 0; k < 2; k++)
+            CurrentOutfit = outfit;
+            Formal = outfit == ModelFactory.Outfit.Wedding;
+            int i = (int)outfit;
+            for (int k = 0; k < groomRigs.Length; k++)
             {
                 groomRigs[k].root.gameObject.SetActive(k == i);
                 brideRigs[k].root.gameObject.SetActive(k == i);
@@ -120,8 +144,8 @@ namespace WeddingRun
         {
             groomHolder = ModelFactory.Node(transform, "GroomHolder", Vector3.zero);
             brideHolder = ModelFactory.Node(transform, "BrideHolder", Vector3.zero);
-            groomRigs = new[] { ModelFactory.BuildGroom(groomHolder, false), ModelFactory.BuildGroom(groomHolder, true) };
-            brideRigs = new[] { ModelFactory.BuildBride(brideHolder, false), ModelFactory.BuildBride(brideHolder, true) };
+            groomRigs = new[] { ModelFactory.BuildGroom(groomHolder, false), ModelFactory.BuildGroom(groomHolder, true), ModelFactory.BuildGroom(groomHolder, true, true) };
+            brideRigs = new[] { ModelFactory.BuildBride(brideHolder, false), ModelFactory.BuildBride(brideHolder, true), ModelFactory.BuildBride(brideHolder, false, true) };
             SetFormal(false, false);
             groomHolder.localPosition = new Vector3(GroomX, 0, 0);
             brideHolder.localPosition = new Vector3(GroomX - BrideGap, 0, BrideZ);
@@ -172,6 +196,18 @@ namespace WeddingRun
                 ringGlints[i] = g;
             }
             ringBox.gameObject.SetActive(false);
+            // 文定: her red tea tray with two cups, and the cup he drinks from
+            teaTray = ModelFactory.Node(brideHolder, "TeaTray", Vector3.zero);
+            ModelFactory.Cyl(teaTray, new Color(0.72f, 0.1f, 0.15f), Vector3.zero, 0.2f, 0.03f);
+            ModelFactory.Part(teaTray, MeshKit.Torus(0.2f, 0.014f, 20, 4), Palette.Gold, new Vector3(0, 0.015f, 0), Vector3.one, new Vector3(90, 0, 0));
+            teaCupOnTray = ModelFactory.Node(teaTray, "Cup", new Vector3(0.07f, 0.015f, -0.05f));
+            ModelFactory.TeaCup(teaCupOnTray);
+            ModelFactory.TeaCup(ModelFactory.Node(teaTray, "Cup2", new Vector3(-0.08f, 0.015f, 0.04f)));
+            teaTray.gameObject.SetActive(false);
+            teaCup = ModelFactory.Node(transform, "TeaCup", Vector3.zero);
+            teaCup.localScale = Vector3.one * 1.3f;
+            ModelFactory.TeaCup(teaCup);
+            teaCup.gameObject.SetActive(false);
             kissHeart = ModelFactory.Part(transform, MeshKit.Heart(0.2f), new Color(1f, 0.3f, 0.45f), Vector3.zero, Vector3.one * 0.25f, default, true);
             kissHeart.gameObject.SetActive(false);
             loveHeart = ModelFactory.Part(transform, MeshKit.Heart(0.25f), new Color(1f, 0.36f, 0.52f), Vector3.zero, Vector3.one * 0.6f, default, true);
@@ -185,7 +221,10 @@ namespace WeddingRun
             flipTimer = 0; deadTimer = 0; travelled = 0; trail.Clear(); brideY = 0;
             celebrateTimer = 0; sinceJump = 9f; brideZ = BrideZ; kissed = false;
             proposeTimer = 0; accepted = false;
+            engageTimer = 0; served = false;
             if (ringBox) ringBox.gameObject.SetActive(false);
+            if (teaTray) teaTray.gameObject.SetActive(false);
+            if (teaCup) teaCup.gameObject.SetActive(false);
             foreach (var rr in groomRigs) rr.body.parent.localRotation = Quaternion.Euler(0, 28, 0);
             foreach (var rr in brideRigs) rr.body.parent.localRotation = Quaternion.Euler(0, 28, 0);
             Sliding = false; slideQueued = false; brideSliding = false;
@@ -196,7 +235,9 @@ namespace WeddingRun
             changeSpin = 0;
             groomHolder.localRotation = Quaternion.identity;
             brideHolder.localRotation = Quaternion.identity;
-            foreach (var r in new[] { groomRigs[0], groomRigs[1], brideRigs[0], brideRigs[1] })
+            var allRigs = new List<ModelFactory.Rig>(groomRigs);
+            allRigs.AddRange(brideRigs);
+            foreach (var r in allRigs)
             {
                 r.body.localPosition = Vector3.zero;
                 r.body.localRotation = Quaternion.identity;
@@ -313,13 +354,18 @@ namespace WeddingRun
                 proposeTimer += dt;
                 if (!accepted && proposeTimer > 2.3f) { accepted = true; ProposalAccepted?.Invoke(); }
             }
+            else if (state == State.Engage)
+            {
+                engageTimer += dt;
+                if (!served && engageTimer > 2.2f) { served = true; TeaServed?.Invoke(); }
+            }
 
             // Bride replays the groom's height (and slide) at the point where she now stands.
             trail.Add(new Vector3(travelled, Y, Sliding ? 1 : 0));
             float target = travelled - BrideGap;
             while (trail.Count > 2 && trail[1].x <= target) trail.RemoveAt(0);
             brideYPrev = brideY;
-            if (state != State.Dead && state != State.Celebrate && state != State.Propose && trail.Count >= 2 && trail[0].x <= target)
+            if (state != State.Dead && state != State.Celebrate && state != State.Propose && state != State.Engage && trail.Count >= 2 && trail[0].x <= target)
             {
                 var a = trail[0]; var b = trail[1];
                 float t = Mathf.Approximately(b.x, a.x) ? 1 : Mathf.Clamp01((target - a.x) / (b.x - a.x));
@@ -340,9 +386,10 @@ namespace WeddingRun
 
             groomHolder.localPosition = new Vector3(GroomX, Y, 0);
             // after a bump she walks up next to him; at the wedding finale she walks right up to him
-            bool together = state == State.Celebrate || state == State.Propose;
+            bool together = state == State.Celebrate || state == State.Propose || state == State.Engage;
             float bx = state == State.Dead ? GroomX - 0.75f
                      : state == State.Celebrate ? GroomX - 0.66f
+                     : state == State.Engage ? GroomX - 1.4f
                      : state == State.Propose ? (proposeTimer > 2.9f ? GroomX - 0.66f : GroomX - 1.05f)
                      : GroomX - BrideGap;
             brideX = Mathf.MoveTowards(brideX, bx, dt * (together ? 1.6f : 2.5f));
@@ -371,14 +418,31 @@ namespace WeddingRun
                     }
                 }
             }
+            if (teaTray)
+            {
+                // the tray in both her hands, held out to him; he takes one cup and drinks
+                bool offering = state == State.Engage && engageTimer > 0.5f && engageTimer < 2.6f;
+                if (teaTray.gameObject.activeSelf != offering) teaTray.gameObject.SetActive(offering);
+                if (offering)
+                {
+                    teaTray.localPosition = new Vector3(0.5f, 1.08f, -0.08f);
+                    teaTray.localScale = Vector3.one * UIKit.EaseOutBack(Mathf.Clamp01((engageTimer - 0.5f) * 4f)) * 1.3f;
+                }
+                bool drinking = state == State.Engage && engageTimer > 1.5f && engageTimer < 2.6f;
+                teaCupOnTray.gameObject.SetActive(!drinking);
+                if (teaCup.gameObject.activeSelf != drinking) teaCup.gameObject.SetActive(drinking);
+                if (drinking) teaCup.position = groom.armR.TransformPoint(new Vector3(0, -0.52f, 0));
+            }
             brideHolder.localPosition = new Vector3(brideX, brideY + tiptoe, brideZ);
             // the groom turns around to face her
             // (fully side-on during the kiss so both faces read clearly from the camera)
-            bool facingEachOther = (state == State.Celebrate && celebrateTimer > 0.15f) || (state == State.Propose && proposeTimer > 0.15f);
+            bool facingEachOther = (state == State.Celebrate && celebrateTimer > 0.15f) || (state == State.Propose && proposeTimer > 0.15f)
+                                   || (state == State.Engage && engageTimer > 0.15f);
             var facing = groom.body.parent;
             facing.localRotation = Quaternion.Slerp(facing.localRotation, Quaternion.Euler(0, facingEachOther ? 163f : 28f, 0), dt * 6f);
             var bFacing = bride.body.parent;
-            bool brideTurned = facingEachOther && ((state == State.Celebrate && celebrateTimer > 0.9f) || (state == State.Propose && proposeTimer > 0.6f));
+            bool brideTurned = facingEachOther && ((state == State.Celebrate && celebrateTimer > 0.9f) || (state == State.Propose && proposeTimer > 0.6f)
+                                                   || (state == State.Engage && engageTimer > 0.5f));
             bFacing.localRotation = Quaternion.Slerp(bFacing.localRotation, Quaternion.Euler(0, brideTurned ? -14f : 28f, 0), dt * 6f);
             if (brideScale < 1)
             {
@@ -386,7 +450,7 @@ namespace WeddingRun
                 brideHolder.localScale = Vector3.one * UIKit.EaseOutBack(brideScale);
             }
 
-            bool showShield = HasShield && state != State.Propose && state != State.Celebrate;
+            bool showShield = HasShield && state != State.Propose && state != State.Celebrate && state != State.Engage;
             if (shieldFx && shieldFx.gameObject.activeSelf != showShield)
             {
                 shieldFx.gameObject.SetActive(showShield);
@@ -556,6 +620,46 @@ namespace WeddingRun
                     r.body.localPosition = Vector3.Lerp(r.body.localPosition, Vector3.zero, dt * 8);
                     float nod = t > 2.2f && t < 2.9f ? Mathf.Sin((t - 2.2f) * 18f) * 12f : 0f;
                     if (r.head) r.head.localRotation = Quaternion.Euler(0, 0, nod + (hugging ? -14f : 0f));
+                    if (r.skirt) r.skirt.localRotation = Quaternion.Euler(0, 0, walking ? w * 4f : 0f);
+                }
+                r.body.localScale = Vector3.one;
+                return;
+            }
+
+            if (state == State.Engage)
+            {
+                float t = engageTimer;
+                bool served = t > 2.2f, drinking = t > 1.5f && t < 2.6f;
+                if (!r.isBride)
+                {
+                    // he bows to her, then drinks the tea; afterwards he cheers
+                    float bow = t > 0.7f && t < 1.45f ? Mathf.Sin((t - 0.7f) / 0.75f * Mathf.PI) : 0f;
+                    float cheer = served && !drinking ? Mathf.Sin(Time.time * 8f) * 15f : 0f;
+                    r.legL.localRotation = Quaternion.Slerp(r.legL.localRotation, Quaternion.identity, dt * 8);
+                    r.legR.localRotation = Quaternion.Slerp(r.legR.localRotation, Quaternion.identity, dt * 8);
+                    r.body.localRotation = Quaternion.Slerp(r.body.localRotation, Quaternion.Euler(0, 0, -12f * bow), dt * 10);
+                    r.body.localPosition = Vector3.Lerp(r.body.localPosition, Vector3.zero, dt * 8);
+                    float aL = drinking ? 60f : served ? 150f + cheer : 0f, aR = drinking ? 120f : served ? 150f - cheer : 0f;
+                    r.armL.localRotation = Quaternion.Slerp(r.armL.localRotation, Quaternion.Euler(0, 0, aL), dt * 10);
+                    r.armR.localRotation = Quaternion.Slerp(r.armR.localRotation, Quaternion.Euler(0, 0, aR), dt * 10);
+                    if (r.head) r.head.localRotation = Quaternion.Slerp(r.head.localRotation, Quaternion.Euler(0, 0, drinking ? 14f : 0f), dt * 8);
+                }
+                else
+                {
+                    bool walking = t < 0.6f;
+                    float w = Mathf.Sin(Time.time * 9f);
+                    r.legL.localRotation = walking ? Quaternion.Euler(0, 0, w * 25f) : Quaternion.Slerp(r.legL.localRotation, Quaternion.identity, dt * 8);
+                    r.legR.localRotation = walking ? Quaternion.Euler(0, 0, -w * 25f) : Quaternion.Slerp(r.legR.localRotation, Quaternion.identity, dt * 8);
+                    // both hands hold the tray out to him; once he has drunk she claps
+                    bool offering = t > 0.5f && t < 2.6f;
+                    float clap = served && !offering ? Mathf.Sin(Time.time * 14f) * 14f : 0f;
+                    float a = offering ? 75f : served ? 120f : 20f;
+                    r.armL.localRotation = Quaternion.Slerp(r.armL.localRotation, Quaternion.Euler(0, 0, a + clap), dt * 10);
+                    r.armR.localRotation = Quaternion.Slerp(r.armR.localRotation, Quaternion.Euler(0, 0, a - clap), dt * 10);
+                    r.body.localRotation = Quaternion.Slerp(r.body.localRotation, Quaternion.Euler(0, 0, offering && t > 0.8f && t < 1.4f ? -10f : 0f), dt * 8);
+                    r.body.localPosition = Vector3.Lerp(r.body.localPosition, Vector3.zero, dt * 8);
+                    float nod = served && t < 2.9f ? Mathf.Sin((t - 2.2f) * 18f) * 10f : 0f;
+                    if (r.head) r.head.localRotation = Quaternion.Euler(0, 0, nod);
                     if (r.skirt) r.skirt.localRotation = Quaternion.Euler(0, 0, walking ? w * 4f : 0f);
                 }
                 r.body.localScale = Vector3.one;
