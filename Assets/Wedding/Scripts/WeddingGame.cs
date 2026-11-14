@@ -231,9 +231,11 @@ namespace WeddingRun
         }
 
         /// <summary>中文 → English → 日本語 → …  (title screen and pause menu)</summary>
-        public void ChangeLanguage()
+        public void ChangeLanguage() => SetLanguage(Loc.Next);
+
+        void SetLanguage(Lang lang)
         {
-            Loc.Set(Loc.Next);
+            Loc.Set(lang);
             ui.Rebuild();
             ui.SetBest(best);
             ui.SetCombo(combo, Multiplier);
@@ -1125,6 +1127,14 @@ namespace WeddingRun
         {
             musicSource.Stop();
             if (state == State.Playing) Pause();
+        }
+
+        /// <summary>Called by the wedding web page so the game speaks the page's language ("zh-Hant", "en" or "ja").</summary>
+        [UnityEngine.Scripting.Preserve]
+        public void WebSetLanguage(string code)
+        {
+            var lang = code.StartsWith("en") ? Lang.En : code.StartsWith("ja") ? Lang.Ja : Lang.Zh;
+            if (lang != Loc.Current) SetLanguage(lang);
         }
 
         bool webAudioAllowed = !Platform.IsWebGL;

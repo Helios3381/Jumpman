@@ -34,6 +34,12 @@
         if (unityInstance) unityInstance.SendMessage("WeddingGame", "WebStartBGM");
         else pendingBgm = "start";
       };
+      // Called by the wedding web page so the game uses the page's language (zh-Hant / en / ja).
+      var pendingLang = null;
+      window.callUnitySetLanguage = function (code) {
+        if (unityInstance) unityInstance.SendMessage("WeddingGame", "WebSetLanguage", code);
+        else pendingLang = code;
+      };
       window.callUnityStopBGM = function () {
         if (unityInstance) unityInstance.SendMessage("WeddingGame", "WebStopBGM");
         else pendingBgm = "stop";
@@ -76,6 +82,7 @@
           document.getElementById("loading").style.display = "none";
           if (pendingBgm === "start") window.callUnityStartBGM();
           if (pendingBgm === "stop") window.callUnityStopBGM();
+          if (pendingLang) window.callUnitySetLanguage(pendingLang);
         }).catch(function (message) {
           var e = document.getElementById("error"); e.style.display = "block"; e.textContent = message;
         });
