@@ -165,7 +165,9 @@ namespace WeddingRun
         {
             // On the web page the music starts when the guest enters full screen (WebStartBGM).
             if (webAudioAllowed) PlayMusic(music, true);
-            ui.ShowTitle();
+            // The logo intro only covers the screen; music and the web page bridge keep working while it plays.
+            if (GetComponent<AutoShot>() != null) ui.ShowTitle();
+            else IntroSplash.Play(ui.ShowTitle);
             FitCamera();
         }
 

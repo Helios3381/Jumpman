@@ -10,6 +10,9 @@ namespace WeddingRun
     /// <summary>Every screen of the game, built in code (title, HUD, pause, game over, ranking, how-to).</summary>
     public class GameUI : MonoBehaviour
     {
+        /// <summary>Copyright line shown on the title screen and the logo intro (year fixed to the release year).</summary>
+        public const string Copyright = "© 2026 Helios Studios All rights reserved.";
+
         public class RunResult
         {
             public int score, distance, plus, minus, maxCombo, stage, lap;
@@ -174,7 +177,7 @@ namespace WeddingRun
                 Btn(title, T("返回網頁", "Back to Website", "サイトに戻る"), new Vector2(0.5f, 0), new Vector2(170, 124), new Vector2(310, 96), Style.Secondary, Platform.ExitToWebsite, 34);
 
             Label(title, T("點擊畫面 / 空白鍵：跳躍（按住更高、空中再點一次＝二段跳）　·　往下滑 / ↓：滑行", "Tap / Space: Jump (hold = higher, tap again in the air = double jump)  ·  Swipe down / ↓: Slide", "タップ / スペース：ジャンプ（長押しで高く・空中でもう一度＝2段ジャンプ）　·　下スワイプ / ↓：スライド"), 30, new Color(1, 1, 1, 0.9f), new Vector2(0.5f, 0), new Vector2(0, 62), new Vector2(1800, 50), TextAlignmentOptions.Center, false);
-            var copyright = Label(title, "©2026 Helios Studios All rights reserved.", 22, new Color(1, 1, 1, 0.78f), new Vector2(1, 0), new Vector2(-374, 22), new Vector2(700, 30), TextAlignmentOptions.BottomRight, false);
+            var copyright = Label(title, Copyright, 22, new Color(1, 1, 1, 0.78f), new Vector2(1, 0), new Vector2(-374, 22), new Vector2(700, 30), TextAlignmentOptions.BottomRight, false);
             copyright.enableWordWrapping = false;
             portraitHint = Label(title, T("橫向螢幕遊玩體驗更佳", "Best played in landscape", "スマホを横にして遊んでね"), 34, Palette.Gold, new Vector2(0.5f, 0), new Vector2(0, 400), new Vector2(1600, 60));
         }
